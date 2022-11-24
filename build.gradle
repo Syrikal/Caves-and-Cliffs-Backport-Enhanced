@@ -3,6 +3,7 @@ buildscript {
         maven { url = 'https://files.minecraftforge.net/maven' }
         maven {url "https://plugins.gradle.org/m2/"}
         maven { url 'https://repo.spongepowered.org/maven' }
+        //        maven { url 'https://repo.spongepowered.org/repository/maven-public' } ????
         jcenter()
         mavenCentral()
     }
@@ -80,16 +81,14 @@ repositories {
 
 mixin {
     add sourceSets.main, "main.refmap.json"
-    add sourceSets.another, "another.refmap.json"
+    add sourceSets.main, "cavesandcliffs.refmap.json"
 }
 
 dependencies {
     minecraft 'net.minecraftforge:forge:1.16.5-36.2.34'
 
-    implementation fg.deobf("curse.maven:leap-371402:3243768")
-
-//    implementation fg.deobf("curse.maven:caves-and-cliffs-backport-417430:3592876")
-//    implementation fg.deobf("curse.maven:cavebiomeapi-441706:3519248")
+    implementation fg.deobf("curse.maven:caves-and-cliffs-backport-417430:3592876")
+    implementation fg.deobf("curse.maven:cavebiomeapi-441706:3519248")
 
 }
 

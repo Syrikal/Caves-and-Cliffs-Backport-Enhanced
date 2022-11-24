@@ -21,7 +21,7 @@ modId="ccbackportenhanced" #mandatory
 # see the associated build.gradle script for how to populate this completely automatically during a build
 version="${file.jarVersion}" #mandatory
  # A display name for the mod
-displayName="Caves & Cliffs Backport Enhanced" #mandatory
+displayName="Caves and Cliffs Backport Enhanced" #mandatory
 # A URL to query for updates for this mod. See the JSON update specification https://mcforge.readthedocs.io/en/latest/gettingstarted/autoupdate/
 #updateJSONURL="https://change.me.example.invalid/updates.json" #optional
 # A URL for the "homepage" for this mod, displayed in the mod UI
@@ -33,7 +33,7 @@ credits="This mod depends on and extends the Caves & Cliffs Backport by blackgea
 # A text field displayed in the mod UI
 authors="Syric" #optional
 # The description text for the mod (multi line!) (#mandatory)
-description=''''''
+description='''Adds Quark's Glowberry Sack and adds ways to generate cave biomes.'''
 # A dependency - use the . to indicate dependency for a specific modid. Dependencies are optional.
 [[dependencies.ccbackportenhanced]] #optional
     # the modid of the dependency

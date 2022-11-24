@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "ccbackportenhanced:glowberry_sack"
+    }
+  ],
+  "result": {
+    "item": "cavesandcliffs:glow_berries",
+    "count": 9
+  }
+}
