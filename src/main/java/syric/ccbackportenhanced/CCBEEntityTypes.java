@@ -22,10 +22,13 @@ public class CCBEEntityTypes {
 
 
     // register items
-    public static final RegistryObject<EntityType<LushSeedEntity>> LUSH_SEED =
-            registerEntity("lush_seed",
-                    EntityType.Builder.<LushSeedEntity>of(LushSeedEntity::new, EntityClassification.MISC)
-                            .sized(0.25F, 0.25F).clientTrackingRange(4).updateInterval(10));
+//    public static final RegistryObject<EntityType<LushSeedEntity>> LUSH_SEED =
+//            registerEntity("lush_seed",
+//                    EntityType.Builder.<LushSeedEntity>of(LushSeedEntity::new, EntityClassification.MISC)
+//                            .sized(0.25F, 0.25F).clientTrackingRange(4).updateInterval(10));
+
+    public static final RegistryObject<EntityType<LushSeedEntity>> LUSH_SEED = ENTITY_TYPES.register("lush_seed",
+            () -> EntityType.Builder.<LushSeedEntity>of(LushSeedEntity::new, EntityClassification.MISC).sized(0.25F, 0.25F).clientTrackingRange(4).updateInterval(10).build("lush_seed"));
 
 
     private static <T extends Entity> RegistryObject<EntityType<T>> registerEntity(String entityName, EntityType.Builder<T> builder) {
