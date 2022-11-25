@@ -1,6 +1,8 @@
 package syric.ccbackportenhanced;
 
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemGroup;
+import net.minecraft.item.Rarity;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -17,6 +19,7 @@ public class CCBEItems {
 
 
     // register items
-//    public static final RegistryObject<Item> DRAGONSEEKER = ITEMS.register("dragonseeker", dragonseekerItem::new);
+    public static final RegistryObject<Item> LUSH_SEED = ITEMS.register("lush_seed",
+            () -> new LushSeedItem(new Item.Properties().stacksTo(16).tab(ItemGroup.TAB_MISC).rarity(Rarity.UNCOMMON)));
 
 }

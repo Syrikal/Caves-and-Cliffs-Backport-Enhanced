@@ -39,6 +39,7 @@ public class CCBackportEnhanced
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         CCBEBlocks.register(modEventBus);
         CCBEItems.register(modEventBus);
+        CCBEEntityTypes.register(modEventBus);
         modEventBus.addListener(this::loadComplete);
 
         // Register ourselves for server and other game events we are interested in
