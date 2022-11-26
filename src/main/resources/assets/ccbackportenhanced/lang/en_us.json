@@ -1,5 +1,6 @@
 {
   "block.ccbackportenhanced.glowberry_sack": "Glowberry Sack",
   "item.ccbackportenhanced.lush_seed": "Lush Cave Seed",
-  "entity.ccbackportenhanced.lush_seed": "Lush Cave Seed"
+  "entity.ccbackportenhanced.lush_seed": "Lush Cave Seed",
+  "entity.ccbackportenhanced.lush_generator": "Lush Cave Generator"
 }

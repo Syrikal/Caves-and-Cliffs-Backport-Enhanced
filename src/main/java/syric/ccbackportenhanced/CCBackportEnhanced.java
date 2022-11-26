@@ -3,6 +3,10 @@ package syric.ccbackportenhanced;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.ComposterBlock;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -15,6 +19,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -92,4 +97,21 @@ public class CCBackportEnhanced
             LOGGER.info("HELLO from Register Block");
         }
     }
+
+    public static void chatPrint(String input, Entity entity) {
+        if (entity instanceof PlayerEntity) {
+            String[] outputSplit = input.split("\n");
+            for (String i : outputSplit) {
+                PlayerEntity player = (PlayerEntity) entity;
+                player.displayClientMessage(ITextComponent.nullToEmpty(i), false);
+            }
+        }
+    }
+    public static void chatPrint(String input, World level) {
+        List<? extends PlayerEntity> playerList = level.players();
+        for (PlayerEntity player : playerList) {
+            chatPrint(input, player);
+        }
+    }
+
 }

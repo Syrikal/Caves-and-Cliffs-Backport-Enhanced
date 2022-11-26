@@ -1,14 +1,13 @@
-package syric.ccbackportenhanced;
+package syric.ccbackportenhanced.lush;
 
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.SnowballEntity;
 import net.minecraft.item.*;
-import net.minecraft.stats.Stats;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.world.World;
+import syric.ccbackportenhanced.CCBEItems;
 
 public class LushSeedItem extends Item {
 
@@ -21,7 +20,8 @@ public class LushSeedItem extends Item {
         world.playSound((PlayerEntity)null, player.getX(), player.getY(), player.getZ(), SoundEvents.SNOWBALL_THROW, SoundCategory.NEUTRAL, 0.5F, 0.4F / (random.nextFloat() * 0.4F + 0.8F));
         if (!world.isClientSide) {
             LushSeedEntity lushSeedEntity = new LushSeedEntity(world, player);
-            lushSeedEntity.setItem(itemstack);
+//            lushSeedEntity.setItem(itemstack);
+            lushSeedEntity.setItem(new ItemStack(CCBEItems.LUSH_SEED.get()));
             lushSeedEntity.shootFromRotation(player, player.xRot, player.yRot, 0.0F, 1.5F, 0.0F);
             world.addFreshEntity(lushSeedEntity);
         }

@@ -5,9 +5,9 @@ import net.minecraft.item.ItemGroup;
 import net.minecraft.item.Rarity;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.RegistryObject;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
+import syric.ccbackportenhanced.lush.LushSeedItem;
 
 public class CCBEItems {
     // create DeferredRegister object
