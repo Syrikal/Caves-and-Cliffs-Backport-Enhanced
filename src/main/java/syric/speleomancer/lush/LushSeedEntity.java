@@ -1,4 +1,4 @@
-package syric.ccbackportenhanced.lush;
+package syric.speleomancer.lush;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -14,10 +14,10 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import syric.ccbackportenhanced.CCBEEntityTypes;
-import syric.ccbackportenhanced.CCBEItems;
+import syric.speleomancer.SpeleomancerEntityTypes;
+import syric.speleomancer.SpeleomancerItems;
 
-import static syric.ccbackportenhanced.CCBackportEnhanced.chatPrint;
+import static syric.speleomancer.Speleomancer.chatPrint;
 
 public class LushSeedEntity extends ProjectileItemEntity {
 
@@ -30,12 +30,12 @@ public class LushSeedEntity extends ProjectileItemEntity {
     }
 
     public LushSeedEntity(World world, double d1, double d2, double d3) {
-        super(CCBEEntityTypes.LUSH_SEED.get(), d1, d2, d3, world);
+        super(SpeleomancerEntityTypes.LUSH_SEED.get(), d1, d2, d3, world);
     }
 
     @Override
     protected Item getDefaultItem() {
-        return CCBEItems.LUSH_SEED.get();
+        return SpeleomancerItems.LUSH_SEED.get();
     }
 
 
@@ -66,7 +66,7 @@ public class LushSeedEntity extends ProjectileItemEntity {
     protected void onHit(RayTraceResult result) {
         super.onHit(result);
         if (!this.level.isClientSide) {
-            LushGeneratorEntity lushGenerator = CCBEEntityTypes.LUSH_GENERATOR.get().create(this.level);
+            LushGeneratorEntity lushGenerator = SpeleomancerEntityTypes.LUSH_GENERATOR.get().create(this.level);
             assert lushGenerator != null;
             lushGenerator.moveTo(this.getX(), this.getY(), this.getZ(), this.yRot, 0.0F);
             this.level.addFreshEntity(lushGenerator);

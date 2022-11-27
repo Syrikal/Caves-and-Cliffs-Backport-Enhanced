@@ -1,9 +1,10 @@
-package syric.ccbackportenhanced.util;
+package syric.speleomancer.util;
 
-import com.blackgear.cavesandcliffs.common.blocks.ICaveVines;
+import net.minecraft.block.BlockState;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import syric.speleomancer.SpeleomancerBlockTags;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -11,11 +12,20 @@ import java.util.Random;
 public class Util {
 
 
+    //Used primarily for spreading.
     public static boolean filter(BlockPos pos, World world) {
-        if (world.getBlockState(pos).getBlock() instanceof ICaveVines) {
+        if (world.getBlockState(pos).getBlock().is(SpeleomancerBlockTags.CAVE_DECORATIONS)) {
             return true;
         }
-        return (!world.getBlockState(pos).getMaterial().isSolid()) && !world.getFluidState(pos).isSource();
+        if (world.getBlockState(pos).getMaterial().isSolid()) {
+            return false;
+        }
+        if (world.getFluidState(pos).isSource()) {
+            return false;
+        }
+        else {
+            return true;
+        }
     }
 
 
@@ -49,6 +59,13 @@ public class Util {
         }
     }
 
+    public static BlockState placeVine(World world, BlockPos pos) {
+        return null;
+    }
+
+    public static BlockState placeLichen(World world, BlockPos pos) {
+        return null;
+    }
 
 
 }

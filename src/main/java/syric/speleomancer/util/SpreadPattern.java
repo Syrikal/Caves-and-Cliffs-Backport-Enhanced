@@ -1,4 +1,4 @@
-package syric.ccbackportenhanced.util;
+package syric.speleomancer.util;
 
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
@@ -10,9 +10,9 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static syric.ccbackportenhanced.CCBackportEnhanced.chatPrint;
-import static syric.ccbackportenhanced.util.Util.directionsShuffled;
-import static syric.ccbackportenhanced.util.Util.filter;
+import static syric.speleomancer.Speleomancer.chatPrint;
+import static syric.speleomancer.util.Util.directionsShuffled;
+import static syric.speleomancer.util.Util.filter;
 
 public class SpreadPattern {
 
@@ -139,6 +139,35 @@ public class SpreadPattern {
                     if (list.contains(candidate) && !adjacent.contains(candidate)) {
                         toAdd.add(candidate);
                         tentativeDone = false;
+                    }
+                }
+//                adjacent.add(newpos);
+//                notChecked.remove(newpos);
+            }
+            adjacent.addAll(toAdd);
+            done = tentativeDone;
+        }
+        return adjacent;
+    }
+
+    public static ArrayList<BlockPos> getContiguousLimited(BlockPos pos, List<BlockPos> list, int maxBlocks) {
+        ArrayList<BlockPos> adjacent = new ArrayList<>();
+//        ArrayList<BlockPos> notChecked = new ArrayList<>();
+        adjacent.add(pos);
+        boolean done = false;
+        int countdown = list.size();
+        int added = 0;
+        while (!done && countdown > 0 && added < maxBlocks) {
+            ArrayList<BlockPos> toAdd = new ArrayList<>();
+            countdown --;
+            boolean tentativeDone = true;
+            for (BlockPos newpos : adjacent) {
+                for (Direction direction: Direction.values()) {
+                    BlockPos candidate = newpos.relative(direction);
+                    if (list.contains(candidate) && !adjacent.contains(candidate)) {
+                        toAdd.add(candidate);
+                        tentativeDone = false;
+                        added++;
                     }
                 }
 //                adjacent.add(newpos);

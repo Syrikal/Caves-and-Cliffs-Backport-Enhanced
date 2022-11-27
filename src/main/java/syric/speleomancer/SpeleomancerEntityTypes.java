@@ -1,4 +1,4 @@
-package syric.ccbackportenhanced;
+package syric.speleomancer;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityClassification;
@@ -7,13 +7,13 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
-import syric.ccbackportenhanced.lush.LushGeneratorEntity;
-import syric.ccbackportenhanced.lush.LushSeedEntity;
+import syric.speleomancer.lush.LushGeneratorEntity;
+import syric.speleomancer.lush.LushSeedEntity;
 
-public class CCBEEntityTypes {
+public class SpeleomancerEntityTypes {
 
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES =
-            DeferredRegister.create(ForgeRegistries.ENTITIES, CCBackportEnhanced.MODID);
+            DeferredRegister.create(ForgeRegistries.ENTITIES, Speleomancer.MODID);
 
     static void register(IEventBus bus) {
         ENTITY_TYPES.register(bus);

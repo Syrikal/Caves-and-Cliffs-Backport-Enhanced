@@ -1,4 +1,4 @@
-package syric.ccbackportenhanced;
+package syric.speleomancer;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
@@ -7,11 +7,11 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
-import syric.ccbackportenhanced.lush.LushSeedItem;
+import syric.speleomancer.lush.LushSeedItem;
 
-public class CCBEItems {
+public class SpeleomancerItems {
     // create DeferredRegister object
-    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, CCBackportEnhanced.MODID);
+    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, Speleomancer.MODID);
 
     static void register(IEventBus bus) {
         ITEMS.register(bus);

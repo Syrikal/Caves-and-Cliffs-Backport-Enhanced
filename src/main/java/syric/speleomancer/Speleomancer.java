@@ -1,4 +1,4 @@
-package syric.ccbackportenhanced;
+package syric.speleomancer;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
@@ -23,14 +23,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 // The value here should match an entry in the META-INF/mods.toml file
-@Mod("ccbackportenhanced")
-public class CCBackportEnhanced
+@Mod("speleomancer")
+public class Speleomancer
 {
     // Directly reference a log4j logger.
     private static final Logger LOGGER = LogManager.getLogger();
-    public static final String MODID = "ccbackportenhanced";
+    public static final String MODID = "speleomancer";
 
-    public CCBackportEnhanced() {
+    public Speleomancer() {
         // Register the setup method for modloading
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
         // Register the enqueueIMC method for modloading
@@ -42,9 +42,10 @@ public class CCBackportEnhanced
 
 
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-        CCBEBlocks.register(modEventBus);
-        CCBEItems.register(modEventBus);
-        CCBEEntityTypes.register(modEventBus);
+        SpeleomancerBlocks.register(modEventBus);
+        SpeleomancerItems.register(modEventBus);
+        SpeleomancerEntityTypes.register(modEventBus);
+        SpeleomancerBlockTags.init();
         modEventBus.addListener(this::loadComplete);
 
         // Register ourselves for server and other game events we are interested in
@@ -59,7 +60,7 @@ public class CCBackportEnhanced
     }
 
     public void loadComplete(FMLLoadCompleteEvent event) {
-        ComposterBlock.COMPOSTABLES.put(CCBEBlocks.GLOWBERRY_SACK.get().asItem(), 1F);
+        ComposterBlock.COMPOSTABLES.put(SpeleomancerBlocks.GLOWBERRY_SACK.get().asItem(), 1F);
     }
 
     private void doClientStuff(final FMLClientSetupEvent event) {

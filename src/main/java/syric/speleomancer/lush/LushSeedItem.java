@@ -1,4 +1,4 @@
-package syric.ccbackportenhanced.lush;
+package syric.speleomancer.lush;
 
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.*;
@@ -7,7 +7,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.world.World;
-import syric.ccbackportenhanced.CCBEItems;
+import syric.speleomancer.SpeleomancerItems;
 
 public class LushSeedItem extends Item {
 
@@ -21,7 +21,7 @@ public class LushSeedItem extends Item {
         if (!world.isClientSide) {
             LushSeedEntity lushSeedEntity = new LushSeedEntity(world, player);
 //            lushSeedEntity.setItem(itemstack);
-            lushSeedEntity.setItem(new ItemStack(CCBEItems.LUSH_SEED.get()));
+            lushSeedEntity.setItem(new ItemStack(SpeleomancerItems.LUSH_SEED.get()));
             lushSeedEntity.shootFromRotation(player, player.xRot, player.yRot, 0.0F, 1.5F, 0.0F);
             world.addFreshEntity(lushSeedEntity);
         }
