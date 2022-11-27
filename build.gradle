@@ -19,8 +19,8 @@ apply plugin: 'org.spongepowered.mixin'
 
 
 version = '0.1'
-group = 'com.syric.speleomancer' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-archivesBaseName = 'speleomancer'
+group = 'com.syric.speleogenesis' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
+archivesBaseName = 'speleogenesis'
 
 sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
 
@@ -96,7 +96,7 @@ dependencies {
 jar {
     manifest {
         attributes([
-                "Specification-Title": "Speleomancer",
+                "Specification-Title": "Speleogenesis",
                 "Specification-Vendor": "Syric",
                 "Specification-Version": "1", // We are version 1 of ourselves
                 "Implementation-Title": project.name,
