@@ -3,6 +3,8 @@ package syric.speleogenesis.lush;
 import com.blackgear.cavesandcliffs.common.blocks.*;
 import com.blackgear.cavesandcliffs.core.other.tags.CCBBlockTags;
 import com.blackgear.cavesandcliffs.core.registries.CCBBlocks;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import net.minecraft.block.*;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
@@ -20,6 +22,7 @@ import net.minecraft.util.math.vector.Vector3i;
 import net.minecraft.world.World;
 import syric.speleogenesis.SpeleogenesisBlockTags;
 import syric.speleogenesis.util.SpreadPattern;
+import syric.speleogenesis.util.Util;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -48,15 +51,22 @@ public class LushGeneratorEntity extends Entity {
     private final ConcurrentHashMap<BlockPos, Double> ceilingMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<BlockPos, Double> floorMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<BlockPos, Double> floorCornerMap = new ConcurrentHashMap<>();
-    //Make a way to find the wall blocks adjacent to a given spread block, so that moss can get spread onto the walls.
     private final ConcurrentHashMap<BlockPos, Double> wallMap = new ConcurrentHashMap<>();
+    //The keys are air blocks. The values are all adjacent wall blocks.
+    private final ArrayListMultimap<BlockPos, BlockPos> wallAdjacentMap = ArrayListMultimap.create();
 
     //A way to designate part of a larger area as pond? Perhaps pondFloor takes in a subset of horizontal area in which it's allowed to work.
 
     private final ArrayList<BlockPos> waterBlocks = new ArrayList<>();
+    //Governs clay blocks that can have decorations added.
     private final ArrayList<BlockPos> clayBlocks = new ArrayList<>();
+    //Govers floor moss that can have decorations added.
     private final ArrayList<BlockPos> floorMossBlocks = new ArrayList<>();
+    //Governs ceiling moss that can have decorations added.
     private final ArrayList<BlockPos> ceilingMossBlocks = new ArrayList<>();
+    //Govern nonexposed moss and clay blocks
+    private final ArrayList<BlockPos> additionalMossBlocks = new ArrayList<>();
+    private final ArrayList<BlockPos> additionalClayBlocks = new ArrayList<>();
 
 
     private boolean isOutdoors = false;
@@ -100,6 +110,7 @@ public class LushGeneratorEntity extends Entity {
 
             //Decide what step to do next
             //Find the origin
+            //TODO Make sure origin point is in the right place
             if (!foundOrigin) {
                 findOrigin();
                 chatPrint("Found origin", world);
@@ -120,22 +131,24 @@ public class LushGeneratorEntity extends Entity {
             //Spread into an area
             else if (!completedSpread) {
                 if (pattern == null) {
-                    pattern = new SpreadPattern(world, origin, 4200, 15);
+                    pattern = new SpreadPattern(world, origin, 6000, 20);
                 }
                 //Modify this. Too laggy = smaller, too long = larger.
                 int currentSize = pattern.blockFillingMap.size();
                 pattern.growBlockMap(50000);
                 if (pattern.blockFillingMap.size() == currentSize) {
                     spreadAttempts++;
+                } else {
+                    spreadAttempts = 0;
                 }
                 if (spreadAttempts > 3 || pattern.done) {
 //                    chatPrint("Can't spread any further", world);
                     completedSpread = true;
-                    this.spreadMap = pattern.returnMap();
+                    this.spreadMap = pattern.returnMapSpreadDist();
                 }
             }
 
-            //Remove all blocks more than 10 blocks away
+            //Remove all blocks that are too far away
             //Get all replaceable blocks adjacent to blocks in the map
             //Split adjacent blocks by position
             //
@@ -145,15 +158,6 @@ public class LushGeneratorEntity extends Entity {
                 divideCandidateMap();
                 processedMap = true;
                 chatPrint("Processed map", world);
-            }
-
-            //I wrote some code that deletes decorations above water. Perhaps all decorations should be purged first?
-            //If I add 'air' to the placement map, some stuff that checks if stuff's in the placement map could break.
-            //Investigate this.
-            else if (!purgedDecorations) {
-//                purgeDecorations();
-                purgedDecorations = true;
-                chatPrint("Purged decorations", world);
             }
 
             //Place floor: moss, clay, water
@@ -302,7 +306,12 @@ public class LushGeneratorEntity extends Entity {
 
     private void cullMap() {
         for (Map.Entry<BlockPos, Double> entry : spreadMap.entrySet()) {
-            if (entry.getValue() > 10) {
+            //First, cull by spread distance
+            if (entry.getValue() > 15) {
+                spreadMap.remove(entry.getKey());
+            }
+            //Then, cull by absolute distance. Use the ovoid version.
+            else if (Util.ovoidDistance(entry.getKey(), origin) > 10) {
                 spreadMap.remove(entry.getKey());
             }
         }
@@ -313,10 +322,10 @@ public class LushGeneratorEntity extends Entity {
             for (Direction direction : Direction.values()) {
                 BlockPos candidatePos = entry.getKey().relative(direction);
                 boolean replaceable = world.getBlockState(candidatePos).getBlock().is(CCBBlockTags.LUSH_GROUND_REPLACEABLE);
-                boolean notavine = !(world.getBlockState(candidatePos).getBlock() instanceof ICaveVines);
+                boolean notAVine = !(world.getBlockState(candidatePos).getBlock() instanceof ICaveVines);
 
 
-                if (replaceable && notavine) {
+                if (replaceable && notAVine) {
                     replaceCandidateMap.putIfAbsent(candidatePos, candidatePos.distSqr(origin));
                 }
             }
@@ -325,29 +334,44 @@ public class LushGeneratorEntity extends Entity {
 
     private void divideCandidateMap() {
         for (Map.Entry<BlockPos, Double> entry : replaceCandidateMap.entrySet()) {
-            boolean up = filter(entry.getKey().above(), world);
-            boolean down = filter(entry.getKey().below(), world);
-            int numSidesExposed = 0;
-            for (Direction direction : Direction.values()) {
-                if (direction != Direction.UP && direction != Direction.DOWN) {
-                    if (filter(entry.getKey().relative(direction), world)) {
-                        numSidesExposed ++;
-                    }
-                }
-            }
+            boolean isCeiling = spreadMap.containsKey(entry.getKey().below());
+            boolean isFloor = spreadMap.containsKey(entry.getKey().above());
 
-
-            if (down) {
+            //All ceiling is ceiling
+            if (isCeiling) {
                 ceilingMap.putIfAbsent(entry.getKey(), entry.getValue());
             }
-            else if (!up) {
-                wallMap.putIfAbsent(entry.getKey(), entry.getValue());
+            //All floor is floor
+            else if (isFloor) {
+                boolean flushFloor = true;
+                for (Direction direction : Direction.values()) {
+                    if (direction != Direction.UP && direction != Direction.DOWN) {
+                        if (spreadMap.containsKey(entry.getKey().relative(direction))) {
+                            flushFloor = false;
+                            break;
+                        }
+                    }
+                }
+                //If not next to any spread blocks, it's flush in the floor. Put it in floor map.
+                if (flushFloor) {
+                    floorMap.putIfAbsent(entry.getKey(), entry.getValue());
+                }
+                //Otherwise it's a floor corner.
+                else {
+                    floorCornerMap.putIfAbsent(entry.getKey(), entry.getValue());
+                }
             }
-            else if (numSidesExposed == 0) {
-                floorMap.putIfAbsent(entry.getKey(), entry.getValue());
-            }
+            //It's a wall.
             else {
-                floorCornerMap.putIfAbsent(entry.getKey(), entry.getValue());
+                wallMap.putIfAbsent(entry.getKey(), entry.getValue());
+                //Put adjacent air blocks into the multimap.
+                for (Direction direction : Direction.values()) {
+                    if (direction != Direction.UP && direction != Direction.DOWN) {
+                        if (spreadMap.containsKey(entry.getKey().relative(direction))) {
+                            wallAdjacentMap.put(entry.getKey().relative(direction), entry.getKey());
+                        }
+                    }
+                }
             }
         }
     }
@@ -503,73 +527,155 @@ public class LushGeneratorEntity extends Entity {
     }
 
     private void mossCeiling() {
-        //Remove patches from the ceiling map to be stone (make smaller map that includes them for later)
-        //Specifically, remove 1-5 patches of 3-12 blocks (size roll with disadvantage).
+        //Remove patches from the ceiling map to be stone
+        //Specifically, remove 1-5 patches of 3-12 blocks.
         ArrayList<BlockPos> mosslessCeiling = new ArrayList<>();
+        ArrayList<BlockPos> additionalCeilingMoss = new ArrayList<>();
         for (int i = 0; i < random.nextInt(5)+1; i++) {
 
             Object[] posArray = ceilingMap.keySet().toArray();
             if (posArray.length == 0) {
                 break;
             }
+
+            //Pick a spot
+            //Maybe just make a flat spread instead of several worms.
             BlockPos randomPos = (BlockPos) posArray[random.nextInt(posArray.length)];
-//            int size = Math.min(random.nextInt(10)+3, random.nextInt(10)+3);
-            int size = random.nextInt(10)+3;
+            //Run 2-5 threads from that spot
+            for (int k = 0; k <= random.nextInt(4)+1; k++) {
+                //For each thread, size between 3 and 12
+                int size = random.nextInt(10)+3;
 
+                //Make a new SpreadPattern worm thing to delete patches of that size
+                SpreadPattern pattern = new SpreadPattern(world, randomPos, size, size);
+                pattern.wormMap();
+                //Add mapped blocks to the bald spot
+                for (BlockPos pos : pattern.returnMap().keySet()) {
+                    for (int j = -2; j <= 2; j++) {
+                        mosslessCeiling.add(pos.above(i));
+                    }
+                }
+            }
+        }
 
-            //Make a new SpreadPattern thing to delete patches of that size
+        //In patches, make the ceiling moss layer twice as thicc
+        //0-1 patches of radius 2-5
+        ArrayList<BlockPos> thickMossCeiling = new ArrayList<>();
+        for (int i = 0; i < random.nextInt(3); i++) {
+            Object[] posArray = ceilingMap.keySet().toArray();
+            if (posArray.length == 0) {
+                break;
+            }
+            //Pick a spot
+            BlockPos randomPos = (BlockPos) posArray[random.nextInt(posArray.length)];
+            int size = random.nextInt(40)+5;
+            //Make a new SpreadPattern flat pattern
             SpreadPattern pattern = new SpreadPattern(world, randomPos, size, size);
-            pattern.wormMap();
+            pattern.flatMap();
+            //Add mapped blocks to the thick spot
             for (BlockPos pos : pattern.returnMap().keySet()) {
-                for (int j = -2; j <= 2; j++) {
-                    mosslessCeiling.add(pos.above(i));
+                for (int j = -3; j <= 3; j++) {
+                    thickMossCeiling.add(pos.above(i));
                 }
             }
         }
 
         //Replace the rest of the ceiling with moss
         for (BlockPos pos : ceilingMap.keySet()) {
+            if (world.getBlockState(pos).is(CCBBlocks.MOSS_BLOCK.get())) {
+                continue;
+            }
             if (!mosslessCeiling.contains(pos)) {
                 ceilingMossBlocks.add(pos);
-            } else {
-                //Testing:
-                finalPlacementMap.put(pos, Blocks.REDSTONE_BLOCK.defaultBlockState());
-            }
-        }
+                //I can probably put all the additional moss stuff here to avoid repeated loops through the set of moss.
 
-        //Add 1-3 wall blocks above each mossy ceiling block to the moss list, if there are any
-        //Also a chance of 1-2 nonwall blocks
-        ArrayList<BlockPos> toAdd = new ArrayList<>();
-        for (BlockPos pos : ceilingMossBlocks) {
-            //Add 1-3 wall blocks above ceiling blocks
-            if (wallMap.containsKey(pos.above())) {
-                for (int i = 1; i <= random.nextInt(2) + 1; i++) {
-                    if (wallMap.containsKey(pos.above(i))) {
-                        toAdd.add(pos.above(i));
-                    }
-                }
-            }
-            else {
-                //20% chance of adding solid blocks above
-                if (random.nextDouble() < 0.2) {
-                    if (world.getBlockState(pos.above()).getMaterial().isSolid()) {
-                        toAdd.add(pos.above());
-                    }
-                    //20% chance of adding the block above that
-                    if (random.nextDouble() < 0.2) {
-                        if (world.getBlockState(pos.above(2)).getMaterial().isSolid()) {
-                            toAdd.add(pos.above(2));
+                //Add 1-3 wall blocks above ceiling blocks
+                if (wallMap.containsKey(pos.above())) {
+                    for (int i = 1; i <= random.nextInt(3) + 1; i++) {
+                        if (wallMap.containsKey(pos.above(i))) {
+                            additionalCeilingMoss.add(pos.above(i));
                         }
                     }
                 }
+
+                //Thicken in the patches
+                if (thickMossCeiling.contains(pos) && world.getBlockState(pos.above()).getBlock().is(CCBBlockTags.LUSH_GROUND_REPLACEABLE)) {
+                    additionalCeilingMoss.add(pos.above());
+                }
+
+                //Add wall blocks adjacent to below air blocks
+                for (int i = 0; i < random.nextInt(4); i++) {
+                    if (spreadMap.containsKey(pos.below(i))) {
+                        additionalCeilingMoss.addAll(wallAdjacentMap.get(pos.below(i)));
+                    }
+                }
+
+
+            } else {
+                //Testing:
+//                finalPlacementMap.put(pos, Blocks.REDSTONE_BLOCK.defaultBlockState());
             }
         }
 
-        ceilingMossBlocks.addAll(toAdd);
+//        //ADDING ADDITIONAL CEILING MOSS
+//
+//        //Add 1-3 wall blocks above each mossy ceiling block to the moss list, if there are any
+//        for (BlockPos pos : ceilingMossBlocks) {
+//            //Add 1-3 wall blocks above ceiling blocks
+//            if (wallMap.containsKey(pos.above())) {
+//                for (int i = 1; i <= random.nextInt(3) + 1; i++) {
+//                    if (wallMap.containsKey(pos.above(i))) {
+//                        additionalCeilingMoss.add(pos.above(i));
+//                    }
+//                }
+//            }
+//        }
+//
+//        //In patches, make the ceiling moss layer twice as thicc
+//        //0-1 patches of radius 2-5
+//        ArrayList<BlockPos> thickMossCeiling = new ArrayList<>();
+//        for (int i = 0; i < random.nextInt(3); i++) {
+//            Object[] posArray = ceilingMap.keySet().toArray();
+//            if (posArray.length == 0) {
+//                break;
+//            }
+//            //Pick a spot
+//            BlockPos randomPos = (BlockPos) posArray[random.nextInt(posArray.length)];
+//            int size = random.nextInt(40)+5;
+//            //Make a new SpreadPattern flat pattern
+//            SpreadPattern pattern = new SpreadPattern(world, randomPos, size, size);
+//            pattern.flatMap();
+//            //Add mapped blocks to the thick spot
+//            for (BlockPos pos : pattern.returnMap().keySet()) {
+//                for (int j = -3; j <= 3; j++) {
+//                    thickMossCeiling.add(pos.above(i));
+//                }
+//            }
+//        }
+//        //Actually thicken the ceiling there
+//        for (BlockPos pos : ceilingMossBlocks) {
+//            if (thickMossCeiling.contains(pos) && world.getBlockState(pos.above()).getBlock().is(CCBBlockTags.LUSH_GROUND_REPLACEABLE)) {
+//                additionalCeilingMoss.add(pos.above());
+//            }
+//        }
+//
+//
+//        //Take 0-2 blocks below each exposed ceiling block and turn adjacent wall blocks into moss as well
+//        for (BlockPos pos : ceilingMossBlocks) {
+//            for (int i = 0; i < random.nextInt(4); i++) {
+//                additionalCeilingMoss.addAll(wallAdjacentMap.get(pos.below(i)));
+//            }
+//        }
+
+        additionalMossBlocks.addAll(additionalCeilingMoss);
 
         //Register moss to finalPlacementMap
         for (BlockPos pos : ceilingMossBlocks) {
             finalPlacementMap.put(pos, CCBBlocks.MOSS_BLOCK.get().defaultBlockState());
+        }
+        for (BlockPos pos : additionalMossBlocks) {
+            finalPlacementMap.put(pos, CCBBlocks.MOSS_BLOCK.get().defaultBlockState());
+//            finalPlacementMap.put(pos, Blocks.LAPIS_BLOCK.defaultBlockState());
         }
 
     }

@@ -77,6 +77,7 @@ repositories {
             includeGroup "curse.maven"
         }
     }
+    mavenCentral()
 }
 
 mixin {
@@ -89,6 +90,8 @@ dependencies {
 
     implementation fg.deobf("curse.maven:caves-and-cliffs-backport-417430:3592876")
     implementation fg.deobf("curse.maven:cavebiomeapi-441706:3519248")
+
+//    implementation 'com.google.guava:guava:31.1-jre'
 
 }
 

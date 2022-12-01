@@ -67,5 +67,12 @@ public class Util {
         return null;
     }
 
+    public static double ovoidDistance(BlockPos pos, BlockPos center) {
+        double x = Math.abs(pos.getX() - center.getX());
+        double z = Math.abs(pos.getZ() - center.getZ());
+        double y = Math.abs(pos.getY() - center.getY()) * 0.3;
+        return Math.sqrt(x * x + z * z + y * y);
+    }
+
 
 }

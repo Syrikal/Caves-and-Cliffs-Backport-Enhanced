@@ -116,6 +116,10 @@ public class SpreadPattern {
         return blockDistanceMap;
     }
 
+    public ConcurrentHashMap<BlockPos, Double> returnMapSpreadDist() {
+        return blockDistanceMap;
+    }
+
     private float distance(BlockPos pos) {
         double xdist = Math.pow(origin.getX() - pos.getX(), 2);
         double zdist = Math.pow(origin.getZ() - pos.getZ(), 2);
@@ -213,4 +217,70 @@ public class SpreadPattern {
             blockDistanceMap.put(pos, (double) distance(pos));
         }
     }
+
+    public void flatMap() {
+        if (blockFillingMap.isEmpty()) {
+            blockFillingMap.put(origin, numberBlocks);
+            blockDistanceMap.put(origin, 0.0);
+        }
+        int maxCyclesCountdown = numberBlocks * 2;
+
+        //Iterate until done spreading (complete) OR run out of time (maxCyclesCountdown)
+        while (maxCyclesCountdown > 0) {
+            //Each iteration, assume you're done until you find somewhere you aren't
+            boolean tentativeSuccess = true;
+            //For every block currently in our list:
+            for (Map.Entry<BlockPos, Integer> entry : blockFillingMap.entrySet()) {
+                //The block itself
+                BlockPos pos = entry.getKey();
+                //If it has stuff inside to spread:
+                if (entry.getValue() > 1) {
+                    //We're not done
+                    tentativeSuccess = false;
+                    //For each direction, randomly:
+                    for (Direction direction : directionsShuffled()) {
+                        //Not up or down
+                        if (direction == Direction.DOWN || direction == Direction.UP) {
+                            continue;
+                        }
+
+                        //Get a candidate adjacent block
+                        BlockPos candidate = pos.relative(direction);
+                        //IDEA: spread more than one point at a time? One-sixth current points, min 1, max whatever will equalize
+                        //If it can be spread to, send a point that way. This includes blocks already listed which are less full than itself.
+                        //If it's already in the map, only spread if it's less full than the one doing the spreading!
+                        if (blockFillingMap.containsKey(candidate)) {
+                            if (blockFillingMap.get(candidate) < blockFillingMap.get(pos)) {
+                                blockFillingMap.put(candidate, blockFillingMap.get(candidate) + 1);
+                                blockFillingMap.put(pos, blockFillingMap.get(pos) - 1);
+                            }
+                        //If it's not in the map yet, spread one point to it.
+                        } else {
+                            blockFillingMap.put(candidate, 1);
+                            blockFillingMap.put(pos, blockFillingMap.get(pos) - 1);
+                            blockDistanceMap.putIfAbsent(candidate, blockDistanceMap.get(pos)+1);
+                            if (blockDistanceMap.get(pos)+1 > maxRadius) {
+//                                    chatPrint("Spread too far, calling off", world);
+                                done = true;
+                                return;
+                            }
+                        }
+                    }
+                    //Once you're done iterating over directions from this position, move on to the next block in the map
+                }
+                //If there's nothing to spread from this location, don't bother and move on to the next block in the map
+            }
+
+            //Once finished iterating over current blocks:
+            //Check to see if we're done, i.e. there was no spreading to do
+            if (tentativeSuccess) {
+                done = true;
+                return;
+            }
+
+            //Reduce countdown
+            maxCyclesCountdown --;
+        }
+    }
+
 }
