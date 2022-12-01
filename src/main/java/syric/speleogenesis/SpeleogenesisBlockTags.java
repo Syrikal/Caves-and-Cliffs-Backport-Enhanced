@@ -5,12 +5,13 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ITag;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.Tags;
+import org.lwjgl.system.CallbackI;
 
 public class SpeleogenesisBlockTags {
     public static final ITag.INamedTag<Block> CAVE_DECORATIONS = register("cave_decorations");
-    public static final ITag.INamedTag<Block> MOSS_FLOOR_DECORATIONS = register("cave_decorations");
-    public static final ITag.INamedTag<Block> DRIPLEAF = register("cave_decorations");
-    public static final ITag.INamedTag<Block> CEILING_DECORATIONS = register("cave_decorations");
+//    public static final ITag.INamedTag<Block> MOSS_FLOOR_DECORATIONS = register("cave_decorations");
+//    public static final ITag.INamedTag<Block> DRIPLEAF = register("cave_decorations");
+//    public static final ITag.INamedTag<Block> CEILING_DECORATIONS = register("cave_decorations");
 
 
 
@@ -21,11 +22,15 @@ public class SpeleogenesisBlockTags {
     }
 
     private static ITag.INamedTag<Block> register(String path) {
-        return BlockTags.bind((new ResourceLocation("ccbackportenhanced", path)).toString());
+        return BlockTags.createOptional((new ResourceLocation(Speleogenesis.MODID, path)));
     }
 
-    private static Tags.IOptionalNamedTag<Block> register(String id, String path) {
-        return BlockTags.createOptional(new ResourceLocation(id, path));
+    private static ITag.INamedTag<Block> registerForge(String path) {
+        return BlockTags.createOptional((new ResourceLocation("forge", path)));
     }
+
+//    private static Tags.IOptionalNamedTag<Block> register(String id, String path) {
+//        return BlockTags.createOptional(new ResourceLocation(id, path));
+//    }
 }
 

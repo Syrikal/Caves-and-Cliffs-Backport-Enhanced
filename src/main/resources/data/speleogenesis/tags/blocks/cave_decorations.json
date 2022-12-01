@@ -10,9 +10,6 @@
     "cavesandcliffs:glow_lichen",
     "cavesandcliffs:small_dripleaf",
     "cavesandcliffs:large_dripleaf",
-    "cavesandcliffs:large_dripleaf_stem",
-    "minecraft:vines",
-    "minecraft:grass",
-    "minecraft:tall_grass"
+    "cavesandcliffs:large_dripleaf_stem"
   ]
 }

@@ -476,9 +476,9 @@ public class LushGeneratorEntity extends Entity {
         for (BlockPos pos : waterBlocks) {
             finalPlacementMap.put(pos, Blocks.WATER.defaultBlockState());
             //Delete decorations above water
-            if (world.getBlockState(pos.above()).is(SpeleogenesisBlockTags.CAVE_DECORATIONS)) {
-                finalPlacementMap.put(pos.above(), Blocks.AIR.defaultBlockState());
-            }
+//            if (world.getBlockState(pos.above()).is(SpeleogenesisBlockTags.CAVE_DECORATIONS)) {
+//                finalPlacementMap.put(pos.above(), Blocks.AIR.defaultBlockState());
+//            }
         }
         for (BlockPos pos : clayBlocks) {
             //Add wall blocks above
