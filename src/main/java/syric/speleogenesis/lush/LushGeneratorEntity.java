@@ -59,14 +59,14 @@ public class LushGeneratorEntity extends Entity {
 
     private final ArrayList<BlockPos> waterBlocks = new ArrayList<>();
     //Governs clay blocks that can have decorations added.
-    private final ArrayList<BlockPos> clayBlocks = new ArrayList<>();
-    //Govers floor moss that can have decorations added.
+    private final ArrayList<BlockPos> exposedClayBlocks = new ArrayList<>();
+    //Governs floor moss that can have decorations added.
     private final ArrayList<BlockPos> floorMossBlocks = new ArrayList<>();
     //Governs ceiling moss that can have decorations added.
     private final ArrayList<BlockPos> ceilingMossBlocks = new ArrayList<>();
     //Govern nonexposed moss and clay blocks
-    private final ArrayList<BlockPos> additionalMossBlocks = new ArrayList<>();
-    private final ArrayList<BlockPos> additionalClayBlocks = new ArrayList<>();
+    private final ArrayList<BlockPos> nonexposedMossBlocks = new ArrayList<>();
+    private final ArrayList<BlockPos> nonexposedClayBlocks = new ArrayList<>();
 
 
     private boolean isOutdoors = false;
@@ -75,13 +75,11 @@ public class LushGeneratorEntity extends Entity {
     private boolean foundOrigin = false;
     private boolean completedSpread = false;
     private boolean processedMap = false;
-    private boolean purgedDecorations = false;
     private boolean generateFloor = false;
     private boolean generateCeiling = false;
     private boolean generateDecorations =false;
     private boolean placed = false;
     private boolean setBiome = false;
-    private boolean removedItems = false;
 
     private double rippleDist = 0.0;
 
@@ -120,7 +118,7 @@ public class LushGeneratorEntity extends Entity {
             else if (isOutdoors) {
                 //Plant an azalea tree
                 if (!plantedTree) {
-                    plantAzalea(origin);
+                    plantAzaleaTree(origin);
                 }
                 else {
                     chatPrint("All done, deleting entity", world);
@@ -163,7 +161,7 @@ public class LushGeneratorEntity extends Entity {
             //Place floor: moss, clay, water
             //FIGURE OUT WHAT REPLACES WHAT AND WHAT DOESN'T
             else if (!generateFloor) {
-                if (random.nextDouble() < 0.3) {
+                if (random.nextDouble() < 1) {
                     pondFloor();
                 } else {
                     mossFloor();
@@ -202,12 +200,12 @@ public class LushGeneratorEntity extends Entity {
 //                }
             }
 
-            //Remove any dropped items
-            else if (!removedItems) {
-//                removeItems();
-                removedItems = true;
-                chatPrint("Removed items", world);
-            }
+//            //Remove any dropped items
+//            else if (!removedItems) {
+////                removeItems();
+//                removedItems = true;
+//                chatPrint("Removed items", world);
+//            }
 
 
             else {
@@ -389,7 +387,7 @@ public class LushGeneratorEntity extends Entity {
             //Remove any clay and water (don't replace them with moss)
             if (world.getBlockState(pos).is(Blocks.CLAY)) {
                 toRemove.add(pos);
-                clayBlocks.add(pos);
+                exposedClayBlocks.add(pos);
                 continue;
             } else if (world.getBlockState(pos).is(Blocks.WATER)) {
                 toRemove.add(pos);
@@ -414,116 +412,229 @@ public class LushGeneratorEntity extends Entity {
     }
 
     private void pondFloor() {
+
         //Replace floor with water
         for (Map.Entry<BlockPos, Double> entry : floorMap.entrySet()) {
-            //Don't replace moss.
-            if (world.getBlockState(entry.getKey()).is(CCBBlocks.MOSS_BLOCK.get())) {
-                floorMossBlocks.add(entry.getKey());
-            } else {
+            //Don't replace moss or clay.
+            boolean notMoss = !world.getBlockState(entry.getKey()).is(CCBBlocks.MOSS_BLOCK.get());
+
+            boolean notClay = !world.getBlockState(entry.getKey()).is(Blocks.CLAY);
+
+            //if it is clay, override and allow placement if the clay is adjacent to water. This allows it to merge with adjacent pools.
+            //Also, check it for decorations.
+            if (!notClay) {
+                for (Direction direction : Direction.values()) {
+                    if (world.getBlockState(entry.getKey().relative(direction)).is(Blocks.WATER)) {
+                        //Handle dripleaf
+                        if (world.getBlockState(entry.getKey().relative(direction).above()).is(CCBBlocks.SMALL_DRIPLEAF.get())) {
+                            finalPlacementMap.put(entry.getKey().relative(direction).above(), Blocks.AIR.defaultBlockState());
+                            finalPlacementMap.put(entry.getKey().relative(direction).above(2), Blocks.AIR.defaultBlockState());
+                        } else if (world.getBlockState(entry.getKey().relative(direction).above()).is(CCBBlocks.BIG_DRIPLEAF_STEM.get())) {
+                            Direction facing = world.getBlockState(entry.getKey().relative(direction).above()).getValue(BigDripleafStemBlock.FACING);
+                            finalPlacementMap.put(entry.getKey().relative(direction).above(), CCBBlocks.BIG_DRIPLEAF_STEM.get().defaultBlockState().setValue(BigDripleafStemBlock.FACING, facing).setValue(BlockStateProperties.WATERLOGGED, true));
+                        }
+                        notClay = true;
+                        break;
+                    }
+                }
+            }
+
+            if (notMoss && notClay) {
                 waterBlocks.add(entry.getKey());
             }
         }
 
         //Add clay below and around water
+        ArrayList<BlockPos> tempClayList = new ArrayList<>();
+        ArrayList<BlockPos> additionalClayList = new ArrayList<>();
+
         for (BlockPos pos : waterBlocks) {
             for (Direction direction : Direction.values()) {
                 if (direction != Direction.UP && !waterBlocks.contains(pos.relative(direction))) {
-                    //Don't replace moss, unless it's under the water.
+                    //Try to put clay there.
+                    //only 50% chance to replace moss, unless it's underwater.
                     if (world.getBlockState(pos.relative(direction)).is(CCBBlocks.MOSS_BLOCK.get()) && direction != Direction.DOWN) {
-                        floorMossBlocks.add(pos.relative(direction));
-                    } else {
-                        clayBlocks.add(pos.relative(direction));
-                    }
-                }
-            }
-        }
-        clayBlocks.addAll(floorCornerMap.keySet());
-
-        //Edge water blocks have a chance of being replaced with clay.
-        Map<Integer, Double> removalChance = new HashMap<>();
-        removalChance.put(0, 0.0);
-        removalChance.put(1, 0.1);
-        removalChance.put(2, 0.3);
-        removalChance.put(3, 0.5);
-        removalChance.put(4, 0.9);
-        for (Iterator<BlockPos> it = waterBlocks.iterator(); it.hasNext(); ) {
-            BlockPos pos = it.next();
-            int nonwaterblocks = 0;
-            for (Direction direction : Direction.values()) {
-                if (direction.getAxis() != Direction.Axis.Y) {
-                    if (!waterBlocks.contains(pos.relative(direction))) {
-                        nonwaterblocks++;
-                    }
-                }
-            }
-            double remove = removalChance.get(nonwaterblocks);
-            if (random.nextDouble() < remove) {
-                it.remove();
-                clayBlocks.add(pos);
-            }
-        }
-
-        //Two 15% chances to remove a random whole pool.
-        for (int i = 0; i < 2; i++) {
-            if (random.nextDouble() < .15) {
-                Object[] posArray = waterBlocks.toArray();
-                if (posArray.length == 0) {
-                    break;
-                }
-                BlockPos randomPos = (BlockPos) posArray[random.nextInt(posArray.length)];
-                ArrayList<BlockPos> toRemove = SpreadPattern.getContiguous(randomPos, waterBlocks);
-
-                //If it's more than 30 blocks, 50% chance of just removing 20-60%.
-                if (toRemove.size() > 30 && random.nextDouble() < 0.5) {
-                    BlockPos furthestPos = randomPos;
-
-                    //Find the block in the pool furthest away from the one selected, to ensure we start at the edge.
-                    double dist = 0;
-                    for (BlockPos pos : toRemove) {
-                        if (pos.distSqr(furthestPos) > dist) {
-                            dist = pos.distSqr(furthestPos);
-                            furthestPos = pos;
+                        if (random.nextBoolean()) {
+                            continue;
+                        } else {
+                            //Remove any decorations and add it to the tempClayList
+                            removeMossDecorations(pos.relative(direction));
+                            tempClayList.add(pos.relative(direction));
                         }
                     }
-                    double numberToRemove = (random.nextInt(5) + 2) * (double) toRemove.size() / 10.0;
-                    toRemove = SpreadPattern.getContiguousLimited(furthestPos, waterBlocks, (int) numberToRemove);
-                }
-                for (BlockPos removePos : toRemove) {
-                    waterBlocks.remove(removePos);
-                    clayBlocks.add(removePos);
+                    else {
+                        //Make the block clay
+                        tempClayList.add(pos.relative(direction));
+                    }
                 }
             }
         }
 
-        ArrayList<BlockPos> toAdd = new ArrayList<>();
+        //Add all floor corners except moss (50% chance)
+        for (BlockPos pos : floorCornerMap.keySet()) {
+            if (!world.getBlockState(pos).is(CCBBlocks.MOSS_BLOCK.get())) {
+                tempClayList.add(pos);
+            } else if (random.nextBoolean()) {
+                //It's moss. Remove it and any decorations on it, then add to the exposedClayBlocks map.
+                removeMossDecorations(pos);
+                tempClayList.add(pos);
+            }
+        }
+
+        //Edge water blocks have a chance of being replaced with clay. This runs twice.
+        Map<Integer, Double> removalChance = new HashMap<>();
+//        removalChance.put(0, 0.0);
+//        removalChance.put(1, 0.0);
+//        removalChance.put(2, 0.3);
+//        removalChance.put(3, 0.5);
+//        removalChance.put(4, 0.9);
+
+        removalChance.put(0, 0.0);
+        removalChance.put(1, 0.0);
+        removalChance.put(2, 0.2);
+        removalChance.put(3, 0.4);
+        removalChance.put(4, 0.8);
+
+//        for (int i = 0; i <= 1; i++) {
+//            for (Iterator<BlockPos> it = waterBlocks.iterator(); it.hasNext(); ) {
+//                BlockPos pos = it.next();
+//                int nonwaterblocks = 0;
+//                for (Direction direction : Direction.values()) {
+//                    if (direction.getAxis() != Direction.Axis.Y) {
+//                        if (!waterBlocks.contains(pos.relative(direction))) {
+//                            nonwaterblocks++;
+//                        }
+//                    }
+//                }
+//                double remove = removalChance.get(nonwaterblocks);
+//                if (random.nextDouble() < remove) {
+//                    it.remove();
+////                tempClayList.add(pos);
+//                    additionalClayList.add(pos);
+//                }
+//            }
+//        }
+
+
+        //Two 15% chances to remove a random whole pool.
+//        for (int i = 0; i < 2; i++) {
+//            if (random.nextDouble() < .15) {
+//                Object[] posArray = waterBlocks.toArray();
+//                if (posArray.length == 0) {
+//                    break;
+//                }
+//                BlockPos randomPos = (BlockPos) posArray[random.nextInt(posArray.length)];
+//                ArrayList<BlockPos> toRemove = SpreadPattern.getContiguous(randomPos, waterBlocks);
+//
+//                //If it's more than 30 blocks, 70% chance of just removing 20-60%.
+//                if (toRemove.size() > 30 && random.nextDouble() < 0.7) {
+//                    BlockPos furthestPos = randomPos;
+//
+//                    //Find the block in the pool furthest away from the one selected, to ensure we start at the edge.
+//                    double dist = 0;
+//                    for (BlockPos pos : toRemove) {
+//                        if (pos.distSqr(furthestPos) > dist) {
+//                            dist = pos.distSqr(furthestPos);
+//                            furthestPos = pos;
+//                        }
+//                    }
+//                    double numberToRemove = (random.nextInt(5) + 2) * (double) toRemove.size() / 10.0;
+//                    toRemove = SpreadPattern.getContiguousLimited(furthestPos, waterBlocks, (int) numberToRemove);
+//                }
+//                for (BlockPos removePos : toRemove) {
+//                    waterBlocks.remove(removePos);
+////                    tempClayList.add(removePos);
+//                    additionalClayList.add(removePos);
+//                }
+//            }
+//        }
+
+        //There should only be one clay map until here. Part of the 'add additional clay' cycle through all clay should be adding the block to the
+        //exposedClayMap if it's exposed. None of the additional clay adds it.
+
+        //Generate thickening pads
+        //0-1 patches of radius 2-5
+        ArrayList<BlockPos> thickClayLayer = new ArrayList<>();
+        if (random.nextBoolean()) {
+            Object[] posArray = floorMap.keySet().toArray();
+            if (posArray.length != 0) {
+                //Pick a spot
+                BlockPos randomPos = (BlockPos) posArray[random.nextInt(posArray.length)];
+                int size = random.nextInt(40)+5;
+                //Make a new SpreadPattern flat pattern
+                SpreadPattern pattern = new SpreadPattern(world, randomPos, size, size);
+                pattern.flatMap();
+                //Add mapped blocks to the thick spot
+                for (BlockPos pos : pattern.returnMap().keySet()) {
+                    for (int j = -3; j <= 3; j++) {
+                        thickClayLayer.add(pos.above(j));
+                    }
+                }            }
+        }
+
+        //ADDING ADDITIONAL CLAY
+        for (BlockPos pos : tempClayList) {
+
+            //Replace walls above clay with clay.
+            //Tweak probabilities!
+//            if (wallMap.containsKey(pos.above())) {
+//                for (int i = 1; i <= random.nextInt(3) + 1; i++) {
+//                    if (wallMap.containsKey(pos.above(i))) {
+//                        additionalClayList.add(pos.above(i));
+//                    }
+//                }
+//            }
+
+            //Replace walls adjacent to air above clay with clay.
+//            for (int i = 0; i < random.nextInt(4); i++) {
+//                if (spreadMap.containsKey(pos.above(i))) {
+//                    additionalClayList.addAll(wallAdjacentMap.get(pos.above(i)));
+//                }
+//            }
+
+            //In patches, thicken clay to two blocks.
+            if (thickClayLayer.contains(pos) && world.getBlockState(pos.below()).getBlock().is(CCBBlockTags.LUSH_GROUND_REPLACEABLE) && !tempClayList.contains(pos.below())) {
+                additionalClayList.add(pos.below());
+            }
+
+            //If the clay is exposed, add it to the exposedClayMap for later decoration.
+            //"Exposed": block above is air or water. 50% chance of requiring spreadMap.
+            //Small dripleaf should require the block above that to be air!
+            boolean exposed = false;
+            Material above = world.getBlockState(pos.above()).getMaterial();
+            if (above == Material.AIR || above == Material.WATER || waterBlocks.contains(pos.above())) {
+                if (spreadMap.containsKey(pos.above()) || waterBlocks.contains(pos.above()) || random.nextBoolean()) {
+                    exposed = true;
+                }
+            }
+            if (exposed) {
+                exposedClayBlocks.add(pos);
+            } else {
+                nonexposedClayBlocks.add(pos);
+            }
+        }
+
+//        nonexposedClayBlocks.addAll(additionalClayList);
+
         //Add water and clay to placement
         for (BlockPos pos : waterBlocks) {
             finalPlacementMap.put(pos, Blocks.WATER.defaultBlockState());
-            //Delete decorations above water
-//            if (world.getBlockState(pos.above()).is(SpeleogenesisBlockTags.CAVE_DECORATIONS)) {
-//                finalPlacementMap.put(pos.above(), Blocks.AIR.defaultBlockState());
-//            }
         }
-        for (BlockPos pos : clayBlocks) {
-            //Add wall blocks above
-            if (wallMap.containsKey(pos.above())) {
-                toAdd.add(pos.above());
-            }
 
-            //Add wall blocks adjacent to above blocks
+        for (BlockPos pos : exposedClayBlocks) {
+            finalPlacementMap.put(pos, Blocks.CLAY.defaultBlockState());
+        }
 
-            //3% chance of not replacing moss REMOVE!
-            //3% chance of replacing non-underwater clay with moss DO THIS INSTEAD!
-            if (random.nextDouble() < 0.97 || finalPlacementMap.get(pos) != CCBBlocks.MOSS_BLOCK.get().defaultBlockState() || waterBlocks.contains(pos.above())) {
-                finalPlacementMap.put(pos, Blocks.CLAY.defaultBlockState());
-            }
+        for (BlockPos pos : nonexposedClayBlocks) {
+            finalPlacementMap.put(pos, Blocks.CLAY.defaultBlockState());
         }
-        for (BlockPos pos : toAdd) {
-            if (random.nextDouble() < 0.97 || finalPlacementMap.get(pos) != CCBBlocks.MOSS_BLOCK.get().defaultBlockState() || waterBlocks.contains(pos.above())) {
-                finalPlacementMap.put(pos, Blocks.CLAY.defaultBlockState());
-            }
-            clayBlocks.add(pos);
+
+        for (BlockPos pos : additionalClayList) {
+            finalPlacementMap.put(pos, Blocks.OBSIDIAN.defaultBlockState());
         }
+
+
+
     }
 
     private void mossCeiling() {
@@ -552,7 +663,7 @@ public class LushGeneratorEntity extends Entity {
                 //Add mapped blocks to the bald spot
                 for (BlockPos pos : pattern.returnMap().keySet()) {
                     for (int j = -2; j <= 2; j++) {
-                        mosslessCeiling.add(pos.above(i));
+                        mosslessCeiling.add(pos.above(j));
                     }
                 }
             }
@@ -561,21 +672,20 @@ public class LushGeneratorEntity extends Entity {
         //In patches, make the ceiling moss layer twice as thicc
         //0-1 patches of radius 2-5
         ArrayList<BlockPos> thickMossCeiling = new ArrayList<>();
-        for (int i = 0; i < random.nextInt(3); i++) {
+        if (random.nextBoolean()) {
             Object[] posArray = ceilingMap.keySet().toArray();
-            if (posArray.length == 0) {
-                break;
-            }
-            //Pick a spot
-            BlockPos randomPos = (BlockPos) posArray[random.nextInt(posArray.length)];
-            int size = random.nextInt(40)+5;
-            //Make a new SpreadPattern flat pattern
-            SpreadPattern pattern = new SpreadPattern(world, randomPos, size, size);
-            pattern.flatMap();
-            //Add mapped blocks to the thick spot
-            for (BlockPos pos : pattern.returnMap().keySet()) {
-                for (int j = -3; j <= 3; j++) {
-                    thickMossCeiling.add(pos.above(i));
+            if (posArray.length != 0) {
+                //Pick a spot
+                BlockPos randomPos = (BlockPos) posArray[random.nextInt(posArray.length)];
+                int size = random.nextInt(40)+5;
+                //Make a new SpreadPattern flat pattern
+                SpreadPattern pattern = new SpreadPattern(world, randomPos, size, size);
+                pattern.flatMap();
+                //Add mapped blocks to the thick spot
+                for (BlockPos pos : pattern.returnMap().keySet()) {
+                    for (int j = -3; j <= 3; j++) {
+                        thickMossCeiling.add(pos.above(j));
+                    }
                 }
             }
         }
@@ -667,13 +777,13 @@ public class LushGeneratorEntity extends Entity {
 //            }
 //        }
 
-        additionalMossBlocks.addAll(additionalCeilingMoss);
+        nonexposedMossBlocks.addAll(additionalCeilingMoss);
 
         //Register moss to finalPlacementMap
         for (BlockPos pos : ceilingMossBlocks) {
             finalPlacementMap.put(pos, CCBBlocks.MOSS_BLOCK.get().defaultBlockState());
         }
-        for (BlockPos pos : additionalMossBlocks) {
+        for (BlockPos pos : nonexposedMossBlocks) {
             finalPlacementMap.put(pos, CCBBlocks.MOSS_BLOCK.get().defaultBlockState());
 //            finalPlacementMap.put(pos, Blocks.LAPIS_BLOCK.defaultBlockState());
         }
@@ -729,8 +839,14 @@ public class LushGeneratorEntity extends Entity {
         //Grows on clay. Chance is maybe 5% out of water, 15% underwater.
         //70-30 big/small.
         //Big ones are between 1 and 5 blocks tall.
-        for (BlockPos pos : clayBlocks) {
-            if (finalPlacementMap.get(pos) == Blocks.CLAY.defaultBlockState() && (spreadMap.containsKey(pos.above()) || waterBlocks.contains(pos.above()))) {
+        for (BlockPos pos : exposedClayBlocks) {
+            //Full list of placement requirements:
+            //Block is still clay in final placement map.
+            //Spreadmap contains the position immediately above OR it's a water block. (CHANGE? THIS SAYS NO DECORATIONS AT EDGES. PERHAPS A 50% CHANCE TO OVERRIDE. ALSO REDUNDANT WITH SELECTING EXPOSED CLAY. CAN POSSIBLY REMOVE ENTIRELY.)
+            //The block two blocks above isn't water.
+            //The block above isn't flowing liquid. (Is there a better way to say this?
+
+            if (finalPlacementMap.get(pos) == Blocks.CLAY.defaultBlockState() && (spreadMap.containsKey(pos.above()) || waterBlocks.contains(pos.above())) && world.getBlockState(pos.above(2)).getMaterial() != Material.WATER && (world.getBlockState(pos.above()).getFluidState().isEmpty() || world.getBlockState(pos.above()).getFluidState().isSource())) {
                 double d = random.nextDouble();
                 if (waterBlocks.contains(pos.above())) {
                     if (d < 0.15) {
@@ -781,6 +897,12 @@ public class LushGeneratorEntity extends Entity {
     private void spawnAtOnce() {
         //Don't forget not to replace unreplaceables!
         for (Map.Entry<BlockPos, BlockState> entry : finalPlacementMap.entrySet()) {
+            if ((world.getBlockState(entry.getKey()).is(CCBBlockTags.LUSH_GROUND_REPLACEABLE) || world.getBlockState(entry.getKey()).getMaterial() == Material.AIR) && !entry.getValue().is(SpeleogenesisBlockTags.CAVE_DECORATIONS)) {
+                world.setBlock(entry.getKey(), entry.getValue(), 3);
+                finalPlacementMap.remove(entry);
+            }
+        }
+        for (Map.Entry<BlockPos, BlockState> entry : finalPlacementMap.entrySet()) {
             if (world.getBlockState(entry.getKey()).is(CCBBlockTags.LUSH_GROUND_REPLACEABLE) || world.getBlockState(entry.getKey()).getMaterial() == Material.AIR) {
                 world.setBlock(entry.getKey(), entry.getValue(), 3);
             }
@@ -823,20 +945,23 @@ public class LushGeneratorEntity extends Entity {
 //            chatPrint("Marking big dripleaf", world);
             int height = Math.min(random.nextInt(5) + 1, random.nextInt(5) + 1);
             height = Math.min(height, ceilingHeightSubmergedClay(pos));
-            finalPlacementMap.put(pos.above(height), CCBBlocks.BIG_DRIPLEAF.get().defaultBlockState().setValue(BigDripleafBlock.FACING, face));
             if (height > 1) {
                 for (int i = 1; i < height; i++) {
                     finalPlacementMap.put(pos.above(i), CCBBlocks.BIG_DRIPLEAF_STEM.get().defaultBlockState().setValue(BigDripleafStemBlock.FACING, face));
                 }
             }
+            finalPlacementMap.put(pos.above(height), CCBBlocks.BIG_DRIPLEAF.get().defaultBlockState().setValue(BigDripleafBlock.FACING, face));
+
         } else {
 //            chatPrint("Marking small dripleaf", world);
-            finalPlacementMap.put(pos.above(),CCBBlocks.SMALL_DRIPLEAF.get().defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.LOWER).setValue(SmallDripleafBlock.FACING, face));
-            finalPlacementMap.put(pos.above(2),CCBBlocks.SMALL_DRIPLEAF.get().defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.LOWER).setValue(SmallDripleafBlock.FACING, face));
+            if (waterBlocks.contains(pos.above())) {
+                finalPlacementMap.put(pos.above(),CCBBlocks.SMALL_DRIPLEAF.get().defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.LOWER).setValue(SmallDripleafBlock.FACING, face).setValue(BlockStateProperties.WATERLOGGED, true));
+            } else {
+                finalPlacementMap.put(pos.above(),CCBBlocks.SMALL_DRIPLEAF.get().defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.LOWER).setValue(SmallDripleafBlock.FACING, face));
+            }
+            finalPlacementMap.put(pos.above(2),CCBBlocks.SMALL_DRIPLEAF.get().defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER).setValue(SmallDripleafBlock.FACING, face));
         }
-        if (waterBlocks.contains(pos.above())) {
-            finalPlacementMap.put(pos.above(), finalPlacementMap.get(pos.above()).setValue(BlockStateProperties.WATERLOGGED, true));
-        }
+
 
     }
 
@@ -919,7 +1044,7 @@ public class LushGeneratorEntity extends Entity {
 
     }
 
-    private void plantAzalea(BlockPos pos) {}
+    private void plantAzaleaTree(BlockPos pos) {}
 
 
     private int ceilingHeight(BlockPos pos) {
@@ -993,6 +1118,20 @@ public class LushGeneratorEntity extends Entity {
 
     }
 
+
+    private void removeMossDecorations(BlockPos pos) {
+        BlockState blockAbove = world.getBlockState(pos.above());
+        Block bab = blockAbove.getBlock();
+        if (blockAbove.getMaterial() == Material.AIR) {
+            return;
+        }
+        if (bab == CCBBlocks.AZALEA.get() || bab == CCBBlocks.MOSS_CARPET.get() || bab == CCBBlocks.FLOWERING_AZALEA.get() || bab == Blocks.GRASS) {
+            finalPlacementMap.put(pos.above(), Blocks.GLASS.defaultBlockState());
+        } else if (bab == Blocks.TALL_GRASS) {
+            finalPlacementMap.put(pos.above(), Blocks.GLASS.defaultBlockState());
+            finalPlacementMap.put(pos.above(2), Blocks.GLASS.defaultBlockState());
+        }
+    }
 
 
     @Override
