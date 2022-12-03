@@ -125,4 +125,49 @@ public class RandomGenerators {
         }
     }
 
+    //Decides the length of a cave vine
+    //Chooses a cap based on a distribution (or the ceiling height if lower). Then it's a uniform roll under that cap.
+    public static int caveVineLength(int maxHeight) {
+        int cap;
+        double d = rdm.nextDouble();
+        if (d < 0.3) {
+            cap = 3;
+        } else if (d < 0.7) {
+            cap = 6;
+        } else if (d < 0.85) {
+            cap = 9;
+        } else if (d < 0.92) {
+            cap = 12;
+        } else if (d < 0.97) {
+            cap = 15;
+        } else {
+            cap = 26;
+        }
+
+        cap = Math.min(cap, maxHeight);
+        return rdm.nextInt(cap) + 1;
+    }
+
+    //Decides the height of a big dripleaf
+    //If restricted, uniform
+    //Otherwise, 1-5, 15/30/25/20/10
+    public static int dripleafHeight(int maxHeight) {
+        if (maxHeight >= 5) {
+            double d = rdm.nextDouble();
+            if (d < 0.15) {
+                return 1;
+            } else if (d < 0.45) {
+                return 2;
+            } else if (d < 0.7) {
+                return 3;
+            } else if (d < 0.9) {
+                return 4;
+            } else {
+                return 5;
+            }
+        } else {
+            return rdm.nextInt(maxHeight)+1;
+        }
+    }
+
 }

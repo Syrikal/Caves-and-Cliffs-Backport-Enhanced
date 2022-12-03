@@ -8,7 +8,6 @@ import net.minecraft.block.*;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
-import net.minecraft.fluid.FluidState;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
 import net.minecraft.network.play.server.SSpawnObjectPacket;
@@ -24,6 +23,7 @@ import syric.speleogenesis.SpeleogenesisBlockTags;
 import syric.speleogenesis.util.RandomGenerators;
 import syric.speleogenesis.util.SpreadPattern;
 import syric.speleogenesis.util.Util;
+import net.minecraft.block.DoublePlantBlock;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -68,6 +68,8 @@ public class LushGeneratorEntity extends Entity {
     //Govern nonexposed moss and clay blocks
     private final ArrayList<BlockPos> nonexposedMossBlocks = new ArrayList<>();
     private final ArrayList<BlockPos> nonexposedClayBlocks = new ArrayList<>();
+    private final ArrayList<BlockPos> mosslessCeiling = new ArrayList<>();
+
 
 
     private boolean isOutdoors = false;
@@ -345,13 +347,14 @@ public class LushGeneratorEntity extends Entity {
                 boolean flushFloor = true;
                 for (Direction direction : Direction.values()) {
                     if (direction != Direction.UP && direction != Direction.DOWN) {
-                        if (spreadMap.containsKey(entry.getKey().relative(direction))) {
+                        //I think this was causing the overhang error.
+                        if (filter(entry.getKey().relative(direction), world)) {
                             flushFloor = false;
                             break;
                         }
                     }
                 }
-                //If not next to any spread blocks, it's flush in the floor. Put it in floor map.
+                //If not next to any spreadable blocks, it's flush in the floor. Put it in floor map.
                 if (flushFloor) {
                     floorMap.putIfAbsent(entry.getKey(), entry.getValue());
                 }
@@ -448,7 +451,6 @@ public class LushGeneratorEntity extends Entity {
         //Add clay below and around water
         ArrayList<BlockPos> tempClayList = new ArrayList<>();
         ArrayList<BlockPos> additionalClayList = new ArrayList<>();
-
         for (BlockPos pos : waterBlocks) {
             for (Direction direction : Direction.values()) {
                 if (direction != Direction.UP && !waterBlocks.contains(pos.relative(direction))) {
@@ -459,8 +461,9 @@ public class LushGeneratorEntity extends Entity {
                             continue;
                         } else {
                             //Remove any decorations and add it to the tempClayList
-                            removeMossDecorations(pos.relative(direction));
-                            tempClayList.add(pos.relative(direction));
+                            //Temporarily removed ability to replace moss!
+//                            removeMossDecorations(pos.relative(direction));
+//                            tempClayList.add(pos.relative(direction));
                         }
                     }
                     else {
@@ -484,17 +487,16 @@ public class LushGeneratorEntity extends Entity {
         }
 
         //Edge water blocks have a chance of being replaced with clay. This runs twice.
-
         for (int i = 0; i < 2; i++) {
             for (Iterator<BlockPos> it = waterBlocks.iterator(); it.hasNext(); ) {
                 BlockPos pos = it.next();
-                int nonwaterblocks = 0;
+                int nonWaterBlocks = 0;
                 for (Direction direction : Util.horizontalDirections()) {
                     if (!waterBlocks.contains(pos.relative(direction))) {
-                        nonwaterblocks++;
+                        nonWaterBlocks++;
                     }
                 }
-                if (RandomGenerators.replaceWaterBoolean(nonwaterblocks)) {
+                if (RandomGenerators.replaceWaterBoolean(nonWaterBlocks)) {
                     it.remove();
                     tempClayList.add(pos);
 //                    additionalClayList.add(pos);
@@ -517,7 +519,7 @@ public class LushGeneratorEntity extends Entity {
                 if (toRemove.size() > 30 && random.nextDouble() < 0.7) {
                     BlockPos furthestPos = randomPos;
 
-                    //Find the block in the pool furthest away from the one selected, to ensure we start at the edge.
+                    //Find the block in the pool that's the furthest away from the one selected, to ensure we start at the edge.
                     double dist = 0;
                     for (BlockPos pos : toRemove) {
                         if (pos.distSqr(furthestPos) > dist) {
@@ -615,27 +617,20 @@ public class LushGeneratorEntity extends Entity {
         for (BlockPos pos : waterBlocks) {
             finalPlacementMap.put(pos, Blocks.WATER.defaultBlockState());
         }
-
         for (BlockPos pos : exposedClayBlocks) {
             finalPlacementMap.put(pos, Blocks.CLAY.defaultBlockState());
         }
-
         for (BlockPos pos : nonexposedClayBlocks) {
             finalPlacementMap.put(pos, Blocks.CLAY.defaultBlockState());
         }
-
-        for (BlockPos pos : additionalClayList) {
+//        for (BlockPos pos : additionalClayList) {
 //            finalPlacementMap.put(pos, Blocks.OBSIDIAN.defaultBlockState());
-        }
-
-
-
+//        }
     }
 
     private void mossCeiling() {
         //Remove patches from the ceiling map to be stone
         //Specifically, remove 1-5 patches of 3-12 blocks.
-        ArrayList<BlockPos> mosslessCeiling = new ArrayList<>();
         ArrayList<BlockPos> additionalCeilingMoss = new ArrayList<>();
         for (int i = 0; i < random.nextInt(5)+1; i++) {
 
@@ -721,55 +716,6 @@ public class LushGeneratorEntity extends Entity {
             }
         }
 
-//        //ADDING ADDITIONAL CEILING MOSS
-//
-//        //Add 1-3 wall blocks above each mossy ceiling block to the moss list, if there are any
-//        for (BlockPos pos : ceilingMossBlocks) {
-//            //Add 1-3 wall blocks above ceiling blocks
-//            if (wallMap.containsKey(pos.above())) {
-//                for (int i = 1; i <= random.nextInt(3) + 1; i++) {
-//                    if (wallMap.containsKey(pos.above(i))) {
-//                        additionalCeilingMoss.add(pos.above(i));
-//                    }
-//                }
-//            }
-//        }
-//
-//        //In patches, make the ceiling moss layer twice as thicc
-//        //0-1 patches of radius 2-5
-//        ArrayList<BlockPos> thickMossCeiling = new ArrayList<>();
-//        for (int i = 0; i < random.nextInt(3); i++) {
-//            Object[] posArray = ceilingMap.keySet().toArray();
-//            if (posArray.length == 0) {
-//                break;
-//            }
-//            //Pick a spot
-//            BlockPos randomPos = (BlockPos) posArray[random.nextInt(posArray.length)];
-//            int size = random.nextInt(40)+5;
-//            //Make a new SpreadPattern flat pattern
-//            SpreadPattern pattern = new SpreadPattern(world, randomPos, size, size);
-//            pattern.flatMap();
-//            //Add mapped blocks to the thick spot
-//            for (BlockPos pos : pattern.returnMap().keySet()) {
-//                for (int j = -3; j <= 3; j++) {
-//                    thickMossCeiling.add(pos.above(i));
-//                }
-//            }
-//        }
-//        //Actually thicken the ceiling there
-//        for (BlockPos pos : ceilingMossBlocks) {
-//            if (thickMossCeiling.contains(pos) && world.getBlockState(pos.above()).getBlock().is(CCBBlockTags.LUSH_GROUND_REPLACEABLE)) {
-//                additionalCeilingMoss.add(pos.above());
-//            }
-//        }
-//
-//
-//        //Take 0-2 blocks below each exposed ceiling block and turn adjacent wall blocks into moss as well
-//        for (BlockPos pos : ceilingMossBlocks) {
-//            for (int i = 0; i < random.nextInt(4); i++) {
-//                additionalCeilingMoss.addAll(wallAdjacentMap.get(pos.below(i)));
-//            }
-//        }
 
         nonexposedMossBlocks.addAll(additionalCeilingMoss);
 
@@ -792,7 +738,23 @@ public class LushGeneratorEntity extends Entity {
 
         for (BlockPos pos : floorMossBlocks) {
             //Only place if it's still moss and also the spot above is a valid target
-            if (finalPlacementMap.get(pos) == CCBBlocks.MOSS_BLOCK.get().defaultBlockState() && spreadMap.containsKey(pos.above())) {
+            //Full list of placement requirements:
+            //Block is still moss in final placement map.
+            boolean stillMoss = finalPlacementMap.get(pos) == CCBBlocks.MOSS_BLOCK.get().defaultBlockState();
+            //Block is a replaceable block
+            boolean replaceable = Util.replaceableOrAir(world, pos);
+            //The block above is air
+            boolean isAir = world.getBlockState(pos.above()).getMaterial() == Material.AIR;
+            //The block above isn't flowing liquid. (Is there a better way to say this?)
+            boolean notInFlow = world.getBlockState(pos.above()).getMaterial() != Material.WATER || world.getBlockState(pos.above()).getFluidState().isSource();
+            //The block above is in the spreadmap (50% chance to waive)
+            boolean spreadmap = spreadMap.containsKey(pos.above()) || random.nextBoolean();
+
+            //Checks if there's enough space to place double grass
+            boolean doubleHigh = world.getBlockState(pos.above(2)).getMaterial() == Material.AIR;
+
+
+            if (stillMoss && replaceable && isAir && notInFlow && spreadmap) {
                 double d = random.nextDouble();
                 if (d < 0.08) {
                     //Azalea
@@ -810,7 +772,7 @@ public class LushGeneratorEntity extends Entity {
                     //Tall grass
                     //If it doesn't fit, just normal grass
                     //Doesn't seem to be working?
-                    if (spreadMap.containsKey(pos.above(2))) {
+                    if (doubleHigh) {
                         finalPlacementMap.put(pos.above(),Blocks.TALL_GRASS.defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.LOWER));
                         finalPlacementMap.put(pos.above(2),Blocks.TALL_GRASS.defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER));
                     } else {
@@ -849,11 +811,11 @@ public class LushGeneratorEntity extends Entity {
             if (stillClay && replaceable && notDrowned && notInFlow && exposedCheck) {
                 double d = random.nextDouble();
                 if (waterBlocks.contains(pos.above())) {
-                    if (d < 0.08) {
+                    if (d < 0.1) {
                         placeDripleaf(pos);
                     }
                 } else {
-                    if (d < 0.04) {
+                    if (d < 0.05) {
                         placeDripleaf(pos);
                     }
                 }
@@ -862,15 +824,26 @@ public class LushGeneratorEntity extends Entity {
     }
 
     private void ceilingDecorations() {
-        //Chance of spore blossoms and glowberry vines everywhere (including removed patches)
-        //20% chance of glowberry vine. Usually 2-5 blocks long, but 10% of them can be up to 10 blocks long.
+        //Chance of spore blossoms and cave vines everywhere (including removed patches)
+        //15% chance of cave vine
         //0.5% chance of spore blossom.
         for (BlockPos pos : ceilingMap.keySet()) {
-            double d = random.nextDouble();
-            if (d < 0.005) {
-                finalPlacementMap.put(pos.below(), CCBBlocks.SPORE_BLOSSOM.get().defaultBlockState());
-            } else if (d < 0.2) {
-                placeCaveVine(pos);
+            //Only place if it's a new moss block, or a removed patch that isn't currently moss.
+            boolean place = false;
+            if (ceilingMossBlocks.contains(pos)) {
+                place = true;
+            } else if (mosslessCeiling.contains(pos) && !world.getBlockState(pos).is(CCBBlocks.MOSS_BLOCK.get())) {
+                place = true;
+            }
+
+            if (place) {
+                double d = random.nextDouble();
+                //Spore blossoms only place on moss
+                if (d < 0.005 && ceilingMossBlocks.contains(pos)) {
+                    finalPlacementMap.put(pos.below(), CCBBlocks.SPORE_BLOSSOM.get().defaultBlockState());
+                } else if (d < 0.15) {
+                    placeCaveVine(pos);
+                }
             }
         }
     }
@@ -895,17 +868,16 @@ public class LushGeneratorEntity extends Entity {
     }
 
     private void spawnAtOnce() {
-        //Don't forget not to replace unreplaceables!
-        //Replace with util function replaceableOrAir
+        //Don't forget not to replace unreplaceables!\
         for (Map.Entry<BlockPos, BlockState> entry : finalPlacementMap.entrySet()) {
-            if ((world.getBlockState(entry.getKey()).is(CCBBlockTags.LUSH_GROUND_REPLACEABLE) || world.getBlockState(entry.getKey()).getMaterial() == Material.AIR) && !entry.getValue().is(SpeleogenesisBlockTags.CAVE_DECORATIONS)) {
+            if ((Util.replaceableOrAir(world, entry.getKey())) && !entry.getValue().is(SpeleogenesisBlockTags.CAVE_DECORATIONS)) {
                 world.setBlock(entry.getKey(), entry.getValue(), 3);
                 finalPlacementMap.remove(entry);
             }
         }
         for (Map.Entry<BlockPos, BlockState> entry : finalPlacementMap.entrySet()) {
-            if (world.getBlockState(entry.getKey()).is(CCBBlockTags.LUSH_GROUND_REPLACEABLE) || world.getBlockState(entry.getKey()).getMaterial() == Material.AIR) {
-                world.setBlock(entry.getKey(), entry.getValue(), 3);
+            if (Util.replaceableOrAir(world, entry.getKey())) {
+                world.setBlock(entry.getKey(), entry.getValue(), 2);
             }
         }
 
@@ -936,22 +908,29 @@ public class LushGeneratorEntity extends Entity {
 
 
     private void placeDripleaf(BlockPos pos) {
-        //30-70 big/small.
+        //40-60 big/small.
         //Big ones are between 1 and 5 blocks tall.
         Random random = new Random();
-        boolean big = random.nextDouble() < 0.3;
+        boolean big = random.nextDouble() < 0.4;
         Direction face = randomFacing();
 
         if (big) {
 //            chatPrint("Marking big dripleaf", world);
-            int height = Math.min(random.nextInt(5) + 1, random.nextInt(5) + 1);
-            height = Math.min(height, ceilingHeightSubmergedClay(pos));
+            int height = RandomGenerators.dripleafHeight(ceilingHeightSubmergedClay(pos));
             if (height > 1) {
                 for (int i = 1; i < height; i++) {
-                    finalPlacementMap.put(pos.above(i), CCBBlocks.BIG_DRIPLEAF_STEM.get().defaultBlockState().setValue(BigDripleafStemBlock.FACING, face));
+                    BlockState state = CCBBlocks.BIG_DRIPLEAF_STEM.get().defaultBlockState().setValue(BigDripleafStemBlock.FACING, face);
+                    if (waterBlocks.contains(pos.above()) && i == 1) {
+                        state = state.setValue(BlockStateProperties.WATERLOGGED, true);
+                    }
+                    finalPlacementMap.put(pos.above(i), state);
                 }
             }
-            finalPlacementMap.put(pos.above(height), CCBBlocks.BIG_DRIPLEAF.get().defaultBlockState().setValue(BigDripleafBlock.FACING, face));
+            BlockState state = CCBBlocks.BIG_DRIPLEAF.get().defaultBlockState().setValue(BigDripleafBlock.FACING, face);
+            if (waterBlocks.contains(pos.above()) && height == 1) {
+                state = state.setValue(BlockStateProperties.WATERLOGGED, true);
+            }
+            finalPlacementMap.put(pos.above(height), state);
 
         } else {
             //Don't place if the ceiling's too low.
@@ -959,34 +938,21 @@ public class LushGeneratorEntity extends Entity {
                 return;
             }
 //            chatPrint("Marking small dripleaf", world);
+            BlockState state = CCBBlocks.SMALL_DRIPLEAF.get().defaultBlockState().setValue(SmallDripleafBlock.HALF, DoubleBlockHalf.LOWER).setValue(SmallDripleafBlock.FACING, face);
             if (waterBlocks.contains(pos.above())) {
-                finalPlacementMap.put(pos.above(),CCBBlocks.SMALL_DRIPLEAF.get().defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.LOWER).setValue(SmallDripleafBlock.FACING, face).setValue(BlockStateProperties.WATERLOGGED, true));
-            } else {
-                finalPlacementMap.put(pos.above(),CCBBlocks.SMALL_DRIPLEAF.get().defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.LOWER).setValue(SmallDripleafBlock.FACING, face));
+                state = state.setValue(BlockStateProperties.WATERLOGGED, true);
             }
+            finalPlacementMap.put(pos.above(), state);
             finalPlacementMap.put(pos.above(2),CCBBlocks.SMALL_DRIPLEAF.get().defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER).setValue(SmallDripleafBlock.FACING, face));
         }
 
 
     }
 
-    //20% chance of glowberry vine. Usually 1-5 blocks long, but 10% of them can be up to 10 blocks long.
-    //50% of vines have berries on 30% of their blocks.
+    //20% chance of cave vine.
+    //10% of vine blocks have berries.
     private void placeCaveVine(BlockPos pos) {
-        int height = ceilingHeight(pos);
-        int vineLength = 1;
-        boolean hasBerries = random.nextBoolean();
-
-        double d = random.nextDouble();
-        //Place big cave vine
-        if (d < 0.1) {
-            vineLength += random.nextInt(10);
-        }
-        //Place small cave vine
-        else {
-            vineLength += random.nextInt(5);
-        }
-        vineLength = Math.min(vineLength, height);
+        int vineLength = RandomGenerators.caveVineLength(ceilingHeight(pos));
 
 
         if (finalPlacementMap.containsKey(pos.below(vineLength))) {
@@ -996,13 +962,13 @@ public class LushGeneratorEntity extends Entity {
 
 
         for (int i = 1; i < vineLength; i++) {
-            if (random.nextDouble() < 0.3 && hasBerries) {
+            if (random.nextDouble() < 0.11) {
                 finalPlacementMap.put(pos.below(i), CCBBlocks.CAVE_VINES_PLANT.get().defaultBlockState().setValue(ICaveVines.BERRIES, true));
             } else {
                 finalPlacementMap.put(pos.below(i), CCBBlocks.CAVE_VINES_PLANT.get().defaultBlockState().setValue(ICaveVines.BERRIES, false));
             }
         }
-        if (random.nextDouble() < 0.3 && hasBerries) {
+        if (random.nextDouble() < 0.11) {
             finalPlacementMap.put(pos.below(vineLength), CCBBlocks.CAVE_VINES.get().defaultBlockState().setValue(ICaveVines.BERRIES, true).setValue(AbstractPlantStemBlock.AGE, 25));
         } else {
             finalPlacementMap.put(pos.below(vineLength), CCBBlocks.CAVE_VINES.get().defaultBlockState().setValue(ICaveVines.BERRIES, false).setValue(AbstractPlantStemBlock.AGE, 25));
