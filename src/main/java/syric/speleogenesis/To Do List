@@ -1,0 +1,125 @@
+//  DEVELOPMENT MAP
+
+//TODO  1) Find an origin point. It should be four blocks above the ground/below the ceiling or halfway in between. Figure out how hitting a wall works, from all directions!
+
+//DONE  2) Spread into an area, including all non-solid and cave decoration blocks.
+//DONE  Cull everything that's too far away by either spread or absolute distance.
+//DONE  Vertical distance matters less for absolute, so it's a vertically-elongated ovoid.
+
+//NOPE  3) Register all existing clay, water, moss, and decorations.
+
+//DONE  4) Get a list of all adjacent blocks (replacement candidates).
+//DONE  Split list into ceiling, floor, floorcorner, wall
+//DONE  In some kind of multimap, register wall blocks linked to whatever adjacent spread blocks there are.
+
+//DONE  5) Ceiling
+//DONE  Decide on several random patches to not fuck with ceiling in.
+//DONE  Turn the ceiling everywhere else into moss.
+//DONE  Extant moss blocks don't count!
+//DONE  Occasionally two layers deep (in patches!).
+//DONE  If there are wall blocks above ceiling blocks, turn those into moss too (0-3 deep).
+//DONE  Take 0-2 blocks below each ceiling block and turn all adjacent wall blocks into moss as well.
+
+//TODO  6) Pool regions
+//TODO  Decide on pool regions.
+//DONE  In pool regions, place water in floor. Don't count existing clay or moss as targets! Do include all existing water here.
+//DONE  Surround floor water with clay, and replace any floorcorners with clay.
+//DONE  This can partially replace existing moss, including all moss that's underwater.
+//DONE  It should delete any decorations on that moss if it does!
+//DONE  Remove some water depending on number of adjacent nonwater blocks.
+//DONE  Shrink and remove pools at random.
+//DONE  Replace walls above clay with clay.
+//DONE  Replace walls below clay with clay.
+//DONE  Replace walls adjacent to air above clay with clay.
+//DONE  In patches, thicken floor clay to two blocks (but only if there's solid matter there to affect).
+//NOPE  Replace a little bit of the newly-placed clay with moss. (Nothing underwater.) DECIDED AGAINST
+
+//TODO  7) Moss regions
+//TODO  Replace floor and floorcorner with moss. Don't count existing clay, moss, or water!
+//TODO  Replace walls below moss with moss.
+//TODO  Replace walls adjcent to air above moss with moss.
+
+//TODO 8) Dripleaf decorations
+//TODO  Place dripleaf plants on newly-placed exposed clay with *one block of source water* (no flowing water above that!) or air directly above them.
+//TODO  Rework big dripleaf heights.
+
+//TODO 9) Moss floor decorations
+//TODO  Place grass, azalea, and moss carpets on newly-placed moss with sufficient air above.
+
+//TODO 10) Ceiling decorations
+//TODO  Place cave vines and spore blossoms on newly-placed ceiling moss.
+//TODO  Cave vine lengths should be right-skewed.
+
+//TODO 11) Misc decorations
+//TODO  Place vines and lichen around in patches (it should go on walls. how to avoid overlap? can't very well say 'only new walls'. maybe it's too sparse to need it).
+
+//TODO 12) Placement
+//TODO  Actually place everything!
+//TODO  Place water, clay, and moss in the first sweep; decorations in the second (so they don't break instantly).
+//TODO  Make sure decorations don't break instantly.
+//TODO  When placing things, make sure they're replaceable. Air counts. Water source blocks do not. Clay shouldn't get replaced but that doesn't need to be a rule I think? Extant moss is occasionally replaced (by clay). Decorations shouldn't get fucked with.
+//TODO  Ripple placement
+//TODO  Pulse ripple placement
+//TODO  Fancy ripple placement that ripples along vines and big dripleaf
+
+
+
+//  TWEAKS AND FIXES
+
+//DONE  Water decorations not spawning
+//TODO  Moss decorations breaking on spawn
+//TODO  Decorations (cave vines particularly) getting too dense on repeated throws. Only place decorations on NEW moss/clay!
+//TODO  Decorations placing on each other on repeated throws (azaleas and moss carpets replacing the bottom half of double grass)
+//DONE  Ceiling stone patches too small (multiple threads from each bare spot? a different patch generation method?)
+//TODO  Improve overlap with existing lush caves terrain
+//TODO  Gravel falling on placement
+//TODO  Can I get noise-based pool regions? that would slap
+//TODO  Ripple placement
+//TODO  Smooth fancy ripple placement
+//TODO  Ripple placement that ripples down vines and up dripleaf. (Shouldn't ripple up tall grass. For tall dripleaf, maybe register all spots as big dripleaf, and convert ones lower down into stems whenever you place? Can I make rippling vines work similarly, the tip growing from tip to main body in realtime? Should they feed out from the bottom, or just add to the tip? I prefer the latter.)
+//TODO  Projectile looks like an ender pearl
+//TODO  Placement shouldn't involve breaking, but some equivalent particle effects and block sounds wouldn't go amiss.
+//TODO  Check that partial pool shrinking is working!
+//TODO  Check that all for-loop variables are referenced correctly.
+//TODO  Allow replacement of gravel
+//TODO  Run the edge clay replacement twice? DONE?
+//TODO  Make custom probability distributions for number of blocks replaced above/below-adjacent/above-adjacent moss and clay
+//TODO  Floor decorations place on nonreplaceables that were supposed to get replaced FIXED FOR CLAY ONLY
+//TODO  Dripleaf placing inside each other/breaking on spawn
+//DONE  Dripleaf should be rarer
+//DONE  Clay should replace walls below itself
+//DONE  Fill in water less
+//TODO  Patches where clay doesn't replace stone
+//DONE  Moss should be able to border water
+//TODO  Remove water before placing clay? Decide.
+
+
+
+//  IDEAS
+
+//TODO  A version rechargeable with (lots of) xp
+//TODO  A *very big* version
+//TODO  If I get noise pools to work, versions that are automatically pools and moss, ignoring noise
+//TODO  An anti-griefing mode where if it detects player-placed blocks in the area it won't allow it?
+//TODO  Config options to make it slower and more performant or faster and laggier (alters both tick rate and also number of things done per pulse)
+//TODO  A model for the generator (end crystal?)
+//TODO  Alternate configurable placement modes: smooth, pulse
+
+
+
+//  DRIPSTONE
+
+//TODO  Some kind of column detection?
+
+
+
+//  OTHER CAVE TYPES
+
+//TODO  Other Cave Types
+//TODO  Magmatic
+//TODO  End Incursion (BetterEnd integration?)
+//TODO  Nether Incursion
+//TODO  Glowworm
+//TODO  Icy
+//TODO  Deep Dark
+//TODO  Quark integration?

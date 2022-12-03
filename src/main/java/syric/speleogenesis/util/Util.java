@@ -1,6 +1,8 @@
 package syric.speleogenesis.util;
 
+import com.blackgear.cavesandcliffs.core.other.tags.CCBBlockTags;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.material.Material;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -45,6 +47,20 @@ public class Util {
         return output;
     }
 
+    public static ArrayList<Direction> horizontalDirectionsShuffled() {
+        Random random = new Random();
+        ArrayList<Direction> output = new ArrayList<>();
+        while (true) {
+            Direction newDir = Direction.getRandom(random);
+            if (!output.contains(newDir) && newDir.getAxis() != Direction.Axis.Y) {
+                output.add(newDir);
+                if (output.size() == 4) {
+                    return output;
+                }
+            }
+        }
+    }
+
     public static Direction randomFacing() {
         Random random = new Random();
         int dir = random.nextInt(4);
@@ -72,6 +88,14 @@ public class Util {
         double z = Math.abs(pos.getZ() - center.getZ());
         double y = Math.abs(pos.getY() - center.getY()) * 0.3;
         return Math.sqrt(x * x + z * z + y * y);
+    }
+
+    public static Direction[] horizontalDirections() {
+        return new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST};
+    }
+
+    public static Boolean replaceableOrAir(World world, BlockPos pos) {
+        return world.getBlockState(pos).is(CCBBlockTags.LUSH_GROUND_REPLACEABLE) || world.getBlockState(pos).getMaterial() == Material.AIR;
     }
 
 

@@ -4,11 +4,11 @@ import com.blackgear.cavesandcliffs.common.blocks.*;
 import com.blackgear.cavesandcliffs.core.other.tags.CCBBlockTags;
 import com.blackgear.cavesandcliffs.core.registries.CCBBlocks;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
 import net.minecraft.block.*;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.fluid.FluidState;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.IPacket;
 import net.minecraft.network.play.server.SSpawnObjectPacket;
@@ -21,6 +21,7 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.vector.Vector3i;
 import net.minecraft.world.World;
 import syric.speleogenesis.SpeleogenesisBlockTags;
+import syric.speleogenesis.util.RandomGenerators;
 import syric.speleogenesis.util.SpreadPattern;
 import syric.speleogenesis.util.Util;
 
@@ -426,12 +427,12 @@ public class LushGeneratorEntity extends Entity {
                 for (Direction direction : Direction.values()) {
                     if (world.getBlockState(entry.getKey().relative(direction)).is(Blocks.WATER)) {
                         //Handle dripleaf
-                        if (world.getBlockState(entry.getKey().relative(direction).above()).is(CCBBlocks.SMALL_DRIPLEAF.get())) {
-                            finalPlacementMap.put(entry.getKey().relative(direction).above(), Blocks.AIR.defaultBlockState());
-                            finalPlacementMap.put(entry.getKey().relative(direction).above(2), Blocks.AIR.defaultBlockState());
-                        } else if (world.getBlockState(entry.getKey().relative(direction).above()).is(CCBBlocks.BIG_DRIPLEAF_STEM.get())) {
-                            Direction facing = world.getBlockState(entry.getKey().relative(direction).above()).getValue(BigDripleafStemBlock.FACING);
-                            finalPlacementMap.put(entry.getKey().relative(direction).above(), CCBBlocks.BIG_DRIPLEAF_STEM.get().defaultBlockState().setValue(BigDripleafStemBlock.FACING, facing).setValue(BlockStateProperties.WATERLOGGED, true));
+                        if (world.getBlockState(entry.getKey().above()).is(CCBBlocks.SMALL_DRIPLEAF.get())) {
+                            finalPlacementMap.put(entry.getKey().above(), Blocks.AIR.defaultBlockState());
+                            finalPlacementMap.put(entry.getKey().above(2), Blocks.AIR.defaultBlockState());
+                        } else if (world.getBlockState(entry.getKey().above()).is(CCBBlocks.BIG_DRIPLEAF_STEM.get())) {
+                            Direction facing = world.getBlockState(entry.getKey().above()).getValue(BigDripleafStemBlock.FACING);
+                            finalPlacementMap.put(entry.getKey().above(), CCBBlocks.BIG_DRIPLEAF_STEM.get().defaultBlockState().setValue(BigDripleafStemBlock.FACING, facing).setValue(BlockStateProperties.WATERLOGGED, true));
                         }
                         notClay = true;
                         break;
@@ -470,84 +471,70 @@ public class LushGeneratorEntity extends Entity {
             }
         }
 
-        //Add all floor corners except moss (50% chance)
+        //Add all floor corners except moss (0% chance)
         for (BlockPos pos : floorCornerMap.keySet()) {
             if (!world.getBlockState(pos).is(CCBBlocks.MOSS_BLOCK.get())) {
                 tempClayList.add(pos);
             } else if (random.nextBoolean()) {
                 //It's moss. Remove it and any decorations on it, then add to the exposedClayBlocks map.
-                removeMossDecorations(pos);
-                tempClayList.add(pos);
+                //Temporarily removed ability to replace moss!
+//                removeMossDecorations(pos);
+//                tempClayList.add(pos);
             }
         }
 
         //Edge water blocks have a chance of being replaced with clay. This runs twice.
-        Map<Integer, Double> removalChance = new HashMap<>();
-//        removalChance.put(0, 0.0);
-//        removalChance.put(1, 0.0);
-//        removalChance.put(2, 0.3);
-//        removalChance.put(3, 0.5);
-//        removalChance.put(4, 0.9);
 
-        removalChance.put(0, 0.0);
-        removalChance.put(1, 0.0);
-        removalChance.put(2, 0.2);
-        removalChance.put(3, 0.4);
-        removalChance.put(4, 0.8);
-
-//        for (int i = 0; i <= 1; i++) {
-//            for (Iterator<BlockPos> it = waterBlocks.iterator(); it.hasNext(); ) {
-//                BlockPos pos = it.next();
-//                int nonwaterblocks = 0;
-//                for (Direction direction : Direction.values()) {
-//                    if (direction.getAxis() != Direction.Axis.Y) {
-//                        if (!waterBlocks.contains(pos.relative(direction))) {
-//                            nonwaterblocks++;
-//                        }
-//                    }
-//                }
-//                double remove = removalChance.get(nonwaterblocks);
-//                if (random.nextDouble() < remove) {
-//                    it.remove();
-////                tempClayList.add(pos);
+        for (int i = 0; i < 2; i++) {
+            for (Iterator<BlockPos> it = waterBlocks.iterator(); it.hasNext(); ) {
+                BlockPos pos = it.next();
+                int nonwaterblocks = 0;
+                for (Direction direction : Util.horizontalDirections()) {
+                    if (!waterBlocks.contains(pos.relative(direction))) {
+                        nonwaterblocks++;
+                    }
+                }
+                if (RandomGenerators.replaceWaterBoolean(nonwaterblocks)) {
+                    it.remove();
+                    tempClayList.add(pos);
 //                    additionalClayList.add(pos);
-//                }
-//            }
-//        }
+                }
+            }
+        }
 
 
         //Two 15% chances to remove a random whole pool.
-//        for (int i = 0; i < 2; i++) {
-//            if (random.nextDouble() < .15) {
-//                Object[] posArray = waterBlocks.toArray();
-//                if (posArray.length == 0) {
-//                    break;
-//                }
-//                BlockPos randomPos = (BlockPos) posArray[random.nextInt(posArray.length)];
-//                ArrayList<BlockPos> toRemove = SpreadPattern.getContiguous(randomPos, waterBlocks);
-//
-//                //If it's more than 30 blocks, 70% chance of just removing 20-60%.
-//                if (toRemove.size() > 30 && random.nextDouble() < 0.7) {
-//                    BlockPos furthestPos = randomPos;
-//
-//                    //Find the block in the pool furthest away from the one selected, to ensure we start at the edge.
-//                    double dist = 0;
-//                    for (BlockPos pos : toRemove) {
-//                        if (pos.distSqr(furthestPos) > dist) {
-//                            dist = pos.distSqr(furthestPos);
-//                            furthestPos = pos;
-//                        }
-//                    }
-//                    double numberToRemove = (random.nextInt(5) + 2) * (double) toRemove.size() / 10.0;
-//                    toRemove = SpreadPattern.getContiguousLimited(furthestPos, waterBlocks, (int) numberToRemove);
-//                }
-//                for (BlockPos removePos : toRemove) {
-//                    waterBlocks.remove(removePos);
-////                    tempClayList.add(removePos);
+        for (int i = 0; i < 2; i++) {
+            if (random.nextDouble() < .15) {
+                Object[] posArray = waterBlocks.toArray();
+                if (posArray.length == 0) {
+                    break;
+                }
+                BlockPos randomPos = (BlockPos) posArray[random.nextInt(posArray.length)];
+                ArrayList<BlockPos> toRemove = SpreadPattern.getContiguous(randomPos, waterBlocks);
+
+                //If it's more than 30 blocks, 70% chance of just removing 20-60%.
+                if (toRemove.size() > 30 && random.nextDouble() < 0.7) {
+                    BlockPos furthestPos = randomPos;
+
+                    //Find the block in the pool furthest away from the one selected, to ensure we start at the edge.
+                    double dist = 0;
+                    for (BlockPos pos : toRemove) {
+                        if (pos.distSqr(furthestPos) > dist) {
+                            dist = pos.distSqr(furthestPos);
+                            furthestPos = pos;
+                        }
+                    }
+                    double numberToRemove = (random.nextInt(5) + 2) * (double) toRemove.size() / 10.0;
+                    toRemove = SpreadPattern.getContiguousLimited(furthestPos, waterBlocks, (int) numberToRemove);
+                }
+                for (BlockPos removePos : toRemove) {
+                    waterBlocks.remove(removePos);
+                    tempClayList.add(removePos);
 //                    additionalClayList.add(removePos);
-//                }
-//            }
-//        }
+                }
+            }
+        }
 
         //There should only be one clay map until here. Part of the 'add additional clay' cycle through all clay should be adding the block to the
         //exposedClayMap if it's exposed. None of the additional clay adds it.
@@ -576,21 +563,29 @@ public class LushGeneratorEntity extends Entity {
         for (BlockPos pos : tempClayList) {
 
             //Replace walls above clay with clay.
-            //Tweak probabilities!
-//            if (wallMap.containsKey(pos.above())) {
-//                for (int i = 1; i <= random.nextInt(3) + 1; i++) {
-//                    if (wallMap.containsKey(pos.above(i))) {
-//                        additionalClayList.add(pos.above(i));
-//                    }
-//                }
-//            }
+            if (wallMap.containsKey(pos.above())) {
+                for (int i = 1; i <= RandomGenerators.ClayUp(); i++) {
+                    if (wallMap.containsKey(pos.above(i))) {
+                        additionalClayList.add(pos.above(i));
+                    }
+                }
+            }
 
             //Replace walls adjacent to air above clay with clay.
-//            for (int i = 0; i < random.nextInt(4); i++) {
-//                if (spreadMap.containsKey(pos.above(i))) {
-//                    additionalClayList.addAll(wallAdjacentMap.get(pos.above(i)));
-//                }
-//            }
+            for (int i = 1; i <= RandomGenerators.ClayUpAdj(); i++) {
+                if (spreadMap.containsKey(pos.above(i))) {
+                    additionalClayList.addAll(wallAdjacentMap.get(pos.above(i)));
+                }
+            }
+
+            //Replace walls below clay with clay.
+            if (wallMap.containsKey(pos.below())) {
+                for (int i = 1; i <= RandomGenerators.ClayDown(); i++) {
+                    if (wallMap.containsKey(pos.below(i))) {
+                        additionalClayList.add(pos.below(i));
+                    }
+                }
+            }
 
             //In patches, thicken clay to two blocks.
             if (thickClayLayer.contains(pos) && world.getBlockState(pos.below()).getBlock().is(CCBBlockTags.LUSH_GROUND_REPLACEABLE) && !tempClayList.contains(pos.below())) {
@@ -614,7 +609,7 @@ public class LushGeneratorEntity extends Entity {
             }
         }
 
-//        nonexposedClayBlocks.addAll(additionalClayList);
+        nonexposedClayBlocks.addAll(additionalClayList);
 
         //Add water and clay to placement
         for (BlockPos pos : waterBlocks) {
@@ -630,7 +625,7 @@ public class LushGeneratorEntity extends Entity {
         }
 
         for (BlockPos pos : additionalClayList) {
-            finalPlacementMap.put(pos, Blocks.OBSIDIAN.defaultBlockState());
+//            finalPlacementMap.put(pos, Blocks.OBSIDIAN.defaultBlockState());
         }
 
 
@@ -697,11 +692,10 @@ public class LushGeneratorEntity extends Entity {
             }
             if (!mosslessCeiling.contains(pos)) {
                 ceilingMossBlocks.add(pos);
-                //I can probably put all the additional moss stuff here to avoid repeated loops through the set of moss.
 
                 //Add 1-3 wall blocks above ceiling blocks
                 if (wallMap.containsKey(pos.above())) {
-                    for (int i = 1; i <= random.nextInt(3) + 1; i++) {
+                    for (int i = 1; i <= RandomGenerators.MossCeilingUp(); i++) {
                         if (wallMap.containsKey(pos.above(i))) {
                             additionalCeilingMoss.add(pos.above(i));
                         }
@@ -714,7 +708,7 @@ public class LushGeneratorEntity extends Entity {
                 }
 
                 //Add wall blocks adjacent to below air blocks
-                for (int i = 0; i < random.nextInt(4); i++) {
+                for (int i = 1; i <= RandomGenerators.MossCeilingDownAdj(); i++) {
                     if (spreadMap.containsKey(pos.below(i))) {
                         additionalCeilingMoss.addAll(wallAdjacentMap.get(pos.below(i)));
                     }
@@ -842,18 +836,24 @@ public class LushGeneratorEntity extends Entity {
         for (BlockPos pos : exposedClayBlocks) {
             //Full list of placement requirements:
             //Block is still clay in final placement map.
-            //Spreadmap contains the position immediately above OR it's a water block. (CHANGE? THIS SAYS NO DECORATIONS AT EDGES. PERHAPS A 50% CHANCE TO OVERRIDE. ALSO REDUNDANT WITH SELECTING EXPOSED CLAY. CAN POSSIBLY REMOVE ENTIRELY.)
-            //The block two blocks above isn't water.
-            //The block above isn't flowing liquid. (Is there a better way to say this?
+            boolean stillClay = finalPlacementMap.get(pos) == Blocks.CLAY.defaultBlockState();
+            //Block is a replaceable block
+            boolean replaceable = Util.replaceableOrAir(world, pos);
+            //The block two blocks above isn't water or about to be water.
+            boolean notDrowned = world.getBlockState(pos.above(2)).getMaterial() != Material.WATER && !waterBlocks.contains(pos.above(2));
+            //The block above isn't flowing liquid. (Is there a better way to say this?)
+            boolean notInFlow = world.getBlockState(pos.above()).getMaterial() != Material.WATER || world.getBlockState(pos.above()).getFluidState().isSource();
+            //Block above is in fact air, water, or about to be water
+            boolean exposedCheck = world.getBlockState(pos.above()).getMaterial() == Material.AIR || world.getBlockState(pos.above()).getMaterial() == Material.WATER || waterBlocks.contains(pos.above());
 
-            if (finalPlacementMap.get(pos) == Blocks.CLAY.defaultBlockState() && (spreadMap.containsKey(pos.above()) || waterBlocks.contains(pos.above())) && world.getBlockState(pos.above(2)).getMaterial() != Material.WATER && (world.getBlockState(pos.above()).getFluidState().isEmpty() || world.getBlockState(pos.above()).getFluidState().isSource())) {
+            if (stillClay && replaceable && notDrowned && notInFlow && exposedCheck) {
                 double d = random.nextDouble();
                 if (waterBlocks.contains(pos.above())) {
-                    if (d < 0.15) {
+                    if (d < 0.08) {
                         placeDripleaf(pos);
                     }
                 } else {
-                    if (d < 0.05) {
+                    if (d < 0.04) {
                         placeDripleaf(pos);
                     }
                 }
@@ -896,6 +896,7 @@ public class LushGeneratorEntity extends Entity {
 
     private void spawnAtOnce() {
         //Don't forget not to replace unreplaceables!
+        //Replace with util function replaceableOrAir
         for (Map.Entry<BlockPos, BlockState> entry : finalPlacementMap.entrySet()) {
             if ((world.getBlockState(entry.getKey()).is(CCBBlockTags.LUSH_GROUND_REPLACEABLE) || world.getBlockState(entry.getKey()).getMaterial() == Material.AIR) && !entry.getValue().is(SpeleogenesisBlockTags.CAVE_DECORATIONS)) {
                 world.setBlock(entry.getKey(), entry.getValue(), 3);
@@ -953,6 +954,10 @@ public class LushGeneratorEntity extends Entity {
             finalPlacementMap.put(pos.above(height), CCBBlocks.BIG_DRIPLEAF.get().defaultBlockState().setValue(BigDripleafBlock.FACING, face));
 
         } else {
+            //Don't place if the ceiling's too low.
+            if (ceilingHeightSubmergedClay(pos) < 2) {
+                return;
+            }
 //            chatPrint("Marking small dripleaf", world);
             if (waterBlocks.contains(pos.above())) {
                 finalPlacementMap.put(pos.above(),CCBBlocks.SMALL_DRIPLEAF.get().defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.LOWER).setValue(SmallDripleafBlock.FACING, face).setValue(BlockStateProperties.WATERLOGGED, true));
@@ -1082,40 +1087,16 @@ public class LushGeneratorEntity extends Entity {
 
     }
 
+    //Takes in the pos of a piece of clay and returns the height, ignoring the block above.
     private int ceilingHeightSubmergedClay(BlockPos pos) {
-        pos = pos.above();
-        BlockPos origin = pos;
-        if (!filter(pos, world)) {
-            if (spreadMap.containsKey(pos.below())) {
-                origin = pos.below();
-            } else if (spreadMap.containsKey(pos.above())) {
-                origin = pos.above();
+        int output = 1;
+        while (true) {
+            if (world.getBlockState(pos.above(output + 1)).getMaterial() == Material.AIR) {
+                output ++;
             } else {
-                return 0;
+                return output;
             }
         }
-
-        ArrayList<BlockPos> column = new ArrayList<>();
-        column.add(origin);
-        boolean stop = false;
-        while (!stop) {
-            boolean tentativeStop = true;
-            ArrayList<BlockPos> toAdd = new ArrayList<>();
-            for (BlockPos colpos : column) {
-                if (!column.contains(colpos.below()) && filter(colpos.below(), world)) {
-                    toAdd.add(colpos.below());
-                    tentativeStop = false;
-                } else if (!column.contains(colpos.above()) && filter(colpos.above(), world)) {
-                    toAdd.add(colpos.above());
-                    tentativeStop = false;
-                }
-            }
-            column.addAll(toAdd);
-            stop = tentativeStop;
-        }
-
-        return column.size();
-
     }
 
 
