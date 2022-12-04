@@ -2,10 +2,12 @@ package syric.speleogenesis.util;
 
 import com.blackgear.cavesandcliffs.core.other.tags.CCBBlockTags;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.block.material.Material;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraftforge.common.Tags;
 import syric.speleogenesis.SpeleogenesisBlockTags;
 
 import java.util.ArrayList;
@@ -95,7 +97,8 @@ public class Util {
     }
 
     public static Boolean replaceableOrAir(World world, BlockPos pos) {
-        return world.getBlockState(pos).is(CCBBlockTags.LUSH_GROUND_REPLACEABLE) || world.getBlockState(pos).getMaterial() == Material.AIR;
+//        return world.getBlockState(pos).is(CCBBlockTags.LUSH_GROUND_REPLACEABLE) || world.getBlockState(pos).getMaterial() == Material.AIR;
+    return world.getBlockState(pos).is(CCBBlockTags.LUSH_GROUND_REPLACEABLE) || world.getBlockState(pos).getMaterial() == Material.AIR || world.getBlockState(pos).is(Blocks.GRAVEL);
     }
 
 

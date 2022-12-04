@@ -9,9 +9,8 @@ import org.lwjgl.system.CallbackI;
 
 public class SpeleogenesisBlockTags {
     public static final ITag.INamedTag<Block> CAVE_DECORATIONS = register("cave_decorations");
-//    public static final ITag.INamedTag<Block> MOSS_FLOOR_DECORATIONS = register("cave_decorations");
-//    public static final ITag.INamedTag<Block> DRIPLEAF = register("cave_decorations");
-//    public static final ITag.INamedTag<Block> CEILING_DECORATIONS = register("cave_decorations");
+    public static final ITag.INamedTag<Block> DRIPLEAF = register("dripleaf");
+    public static final ITag.INamedTag<Block> GLOW_LICHEN_PLACEMENT = register("glow_lichen_placement");
 
 
 

@@ -55,6 +55,9 @@ public class SpreadPattern {
                     tentativeSuccess = false;
                     //For each direction, randomly:
                     for (Direction direction : directionsShuffled()) {
+                        if (blockFillingMap.get(pos) == 1) {
+                            break;
+                        }
                         //Get a candidate adjacent block
                         BlockPos candidate = pos.relative(direction);
                         //IDEA: spread more than one point at a time? One-sixth current points, min 1, max whatever will equalize

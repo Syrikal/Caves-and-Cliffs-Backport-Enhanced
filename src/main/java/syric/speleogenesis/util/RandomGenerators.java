@@ -144,8 +144,18 @@ public class RandomGenerators {
             cap = 26;
         }
 
-        cap = Math.min(cap, maxHeight);
-        return rdm.nextInt(cap) + 1;
+        int output = rdm.nextInt(cap) + 1;
+
+        //If length is more than available height, 50% chance of adapting, 50% chance to abort.
+        if (output < maxHeight) {
+            return output;
+        } else {
+            if (rdm.nextBoolean()) {
+                return rdm.nextInt(maxHeight) + 1;
+            } else {
+                return 0;
+            }
+        }
     }
 
     //Decides the height of a big dripleaf
@@ -168,6 +178,13 @@ public class RandomGenerators {
         } else {
             return rdm.nextInt(maxHeight)+1;
         }
+    }
+
+    //Gives the size of a patch of vines / lichen
+    public static int patchSize() {
+        int one = Math.min(rdm.nextInt(3), rdm.nextInt(3));
+        int two = Math.min(rdm.nextInt(3), rdm.nextInt(3));
+        return Math.min(one, two) + 1;
     }
 
 }

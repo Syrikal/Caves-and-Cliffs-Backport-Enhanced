@@ -1,6 +1,7 @@
 //  DEVELOPMENT MAP
 
 //TODO  1) Find an origin point. It should be four blocks above the ground/below the ceiling or halfway in between. Figure out how hitting a wall works, from all directions!
+//TODO  Maybe the spread starts from the point of impact?
 
 //DONE  2) Spread into an area, including all non-solid and cave decoration blocks.
 //DONE  Cull everything that's too far away by either spread or absolute distance.
@@ -34,27 +35,29 @@
 //DONE  In patches, thicken floor clay to two blocks (but only if there's solid matter there to affect).
 //NOPE  Replace a little bit of the newly-placed clay with moss. (Nothing underwater.) DECIDED AGAINST
 
-//TODO  7) Moss floor regions
-//TODO  Replace floor and floorcorner with moss. Don't count existing clay, moss, or water!
-//TODO  Replace walls below moss with moss.
-//TODO  Replace walls adjcent to air above moss with moss.
+//DONE  7) Moss floor regions
+//DONE  Replace floor and floorcorner with moss. Don't count existing clay, moss, or water!
+//DONE  Replace walls below moss with moss.
+//DONE  Replace walls adjcent to air above moss with moss.
+//DONE Replace clay adjacent to moss with moss.
 
 //DONE 8) Dripleaf decorations
 //DONE  Place dripleaf plants on newly-placed exposed clay with *one block of source water* (no flowing water above that!) or air directly above them.
 //DONE  Rework big dripleaf heights.
 
-//TODO 9) Moss floor decorations
-//TODO  Place grass, azalea, and moss carpets on newly-placed moss with sufficient air above.
+//DONE 9) Moss floor decorations
+//DONE  Place grass, azalea, and moss carpets on newly-placed moss with sufficient air above.
 
 //DONE 10) Ceiling decorations
 //DONE  Place cave vines and spore blossoms on newly-placed ceiling moss.
 //DONE  Cave vine lengths should be right-skewed.
 //DONE  Low ceilings should change the distribution, not just cap it.
 //DONE Check that vines place on bare spots.
+//DONE Vine has a chance of canceling if the ceiling is small. DONE?
 
-//TODO 11) Misc decorations
-//TODO  Place vines and lichen around in patches (it should go on walls. how to avoid overlap? can't very well say 'only new walls'. maybe it's too sparse to need it).
-//TODO Use the VinesFeature as an example.
+//DONE 11) Misc decorations
+//DONE  Place vines and lichen around in patches (it should go on walls. how to avoid overlap? can't very well say 'only new walls'. maybe it's too sparse to need it).
+//DONE Use the VinesFeature as an example.
 
 //TODO  12) Placement
 //TODO  Actually place everything!
@@ -74,20 +77,19 @@
 //  TWEAKS AND FIXES
 
 //DONE  Water decorations not spawning
-//TODO  Moss decorations breaking on spawn
+//DONE  Moss decorations breaking on spawn
 //DONE  Decorations (cave vines particularly) getting too dense on repeated throws. Only place decorations on NEW moss/clay!
-//TODO  Decorations placing on each other on repeated throws (azaleas and moss carpets replacing the bottom half of double grass)
+//TODO  Decorations placing on each other on repeated throws (azaleas and moss carpets replacing the bottom half of double grass) FIXED?
 //DONE  Ceiling stone patches too small (multiple threads from each bare spot? a different patch generation method?)
 //TODO  Improve overlap with existing lush caves terrain
-//TODO  Gravel falling on placement
+//TODO  Gravel falling on placement done?
 //TODO  Projectile looks like an ender pearl
 //TODO  Check that partial pool shrinking is working!
 //TODO  Check that all for-loop variables are referenced correctly.
-//TODO  Allow replacement of gravel
+//DONE  Allow replacement of gravel
 //DONE  Run the edge clay replacement twice?
-//TODO  Make custom probability distributions for number of blocks replaced above/below-adjacent/above-adjacent moss and clay
-//TODO  Floor decorations place on nonreplaceables that were supposed to get replaced FIXED FOR CLAY ONLY
-//TODO  Dripleaf placing inside each other/breaking on spawn.
+//DONE  Make custom probability distributions for number of blocks replaced above/below-adjacent/above-adjacent moss and clay
+//DONE  Floor decorations place on nonreplaceables that were supposed to get replaced
 //DONE  Dripleaf should be rarer
 //DONE  Clay should replace walls below itself
 //DONE  Fill in water less
