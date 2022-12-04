@@ -19,6 +19,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.vector.Vector3i;
 import net.minecraft.world.World;
+import org.lwjgl.system.CallbackI;
 import syric.speleogenesis.SpeleogenesisBlockTags;
 import syric.speleogenesis.util.RandomGenerators;
 import syric.speleogenesis.util.SpreadPattern;
@@ -68,7 +69,7 @@ public class LushGeneratorEntity extends Entity {
     //Govern nonexposed moss and clay blocks
     private final ArrayList<BlockPos> nonexposedMossBlocks = new ArrayList<>();
     private final ArrayList<BlockPos> nonexposedClayBlocks = new ArrayList<>();
-    private final ArrayList<BlockPos> mosslessCeiling = new ArrayList<>();
+    private final ArrayList<BlockPos> bareCeiling = new ArrayList<>();
 
 
 
@@ -102,16 +103,28 @@ public class LushGeneratorEntity extends Entity {
     public void tick() {
         super.tick();
 
+        if (world.isClientSide) {
+            return;
+        }
+
         ticks++;
 
-        //Something to make it spread the actions out over ticks! "if tick % 10 == 0"?
+        if (generateDecorations && !placed) {
+            rippleDist += 0.2;
+            spawnRipple(rippleDist);
+            if (rippleDist >= 30) {
+                placed = true;
+                chatPrint("Finished placing blocks", world);
+            }
+        }
+
+
         if (ticks >= 5) {
             ticks = 0;
 //            chatPrint("Lush generator is ticking! This should happen every 2 seconds.", world);
 
             //Decide what step to do next
             //Find the origin
-            //TODO Make sure origin point is in the right place
             if (!foundOrigin) {
                 findOrigin();
                 chatPrint("Found origin", world);
@@ -122,6 +135,7 @@ public class LushGeneratorEntity extends Entity {
                 //Plant an azalea tree
                 if (!plantedTree) {
                     plantAzaleaTree(origin);
+                    plantedTree = true;
                 }
                 else {
                     chatPrint("All done, deleting entity", world);
@@ -132,7 +146,7 @@ public class LushGeneratorEntity extends Entity {
             //Spread into an area
             else if (!completedSpread) {
                 if (pattern == null) {
-                    pattern = new SpreadPattern(world, origin, 6000, 20);
+                    pattern = new SpreadPattern(world, origin, 10000, 30);
                 }
                 //Modify this. Too laggy = smaller, too long = larger.
                 int currentSize = pattern.blockFillingMap.size();
@@ -164,10 +178,12 @@ public class LushGeneratorEntity extends Entity {
             //Place floor: moss, clay, water
             //FIGURE OUT WHAT REPLACES WHAT AND WHAT DOESN'T
             else if (!generateFloor) {
-                if (random.nextDouble() < 1) {
-                    pondFloor();
-                } else {
-                    mossFloor();
+                if (!floorMap.isEmpty() || !floorCornerMap.isEmpty()) {
+                    if (random.nextDouble() < 0.3) {
+                        pondFloor();
+                    } else {
+                        mossFloor();
+                    }
                 }
                 generateFloor = true;
                 chatPrint("Generated floor", world);
@@ -175,32 +191,21 @@ public class LushGeneratorEntity extends Entity {
 
             //Place ceiling moss blocks
             else if (!generateCeiling) {
-                mossCeiling();
+                if (!ceilingMap.isEmpty()) {
+                    mossCeiling();
+                }
                 generateCeiling = true;
                 chatPrint("Generated ceiling", world);
             }
 
             //Place decorations: vines, dripleaf, grass, etc.
             else if (!generateDecorations) {
+                wallDecorations();
                 mossFloorDecorations();
                 pondFloorDecorations();
                 ceilingDecorations();
-//                wallDecorations();
                 generateDecorations = true;
                 chatPrint("Generated decorations", world);
-            }
-
-            else if (!placed) {
-                spawnAtOnce();
-                placed = true;
-                chatPrint("Placed blocks", world);
-
-//                rippleDist = rippleDist + 1.0;
-//                spawnRipple(rippleDist);
-//                if (rippleDist >= 15) {
-//                    placed = true;
-//                    chatPrint("Finished placing blocks", world);
-//                }
             }
 
 //            //Remove any dropped items
@@ -211,7 +216,7 @@ public class LushGeneratorEntity extends Entity {
 //            }
 
 
-            else {
+            else if (placed) {
                 chatPrint("All done, deleting entity", world);
                 this.kill();
             }
@@ -308,11 +313,11 @@ public class LushGeneratorEntity extends Entity {
     private void cullMap() {
         for (Map.Entry<BlockPos, Double> entry : spreadMap.entrySet()) {
             //First, cull by spread distance
-            if (entry.getValue() > 15) {
+            if (entry.getValue() > 30) {
                 spreadMap.remove(entry.getKey());
             }
             //Then, cull by absolute distance. Use the ovoid version.
-            else if (Util.ovoidDistance(entry.getKey(), origin) > 10) {
+            else if (Util.ovoidDistance(entry.getKey(), origin) > 20) {
                 spreadMap.remove(entry.getKey());
             }
         }
@@ -322,7 +327,7 @@ public class LushGeneratorEntity extends Entity {
         for (Map.Entry<BlockPos, Double> entry : spreadMap.entrySet()) {
             for (Direction direction : Direction.values()) {
                 BlockPos candidatePos = entry.getKey().relative(direction);
-                boolean replaceable = world.getBlockState(candidatePos).getBlock().is(CCBBlockTags.LUSH_GROUND_REPLACEABLE);
+                boolean replaceable = world.getBlockState(candidatePos).getBlock().is(CCBBlockTags.LUSH_GROUND_REPLACEABLE) || world.getBlockState(candidatePos).is(Blocks.GRAVEL);
                 boolean notAVine = !(world.getBlockState(candidatePos).getBlock() instanceof ICaveVines);
 
 
@@ -382,37 +387,57 @@ public class LushGeneratorEntity extends Entity {
         //Elsewhere, replace floor and floorcorner with patches of moss.
         //Basically everything should be moss.
 
-        floorMossBlocks.addAll(floorMap.keySet());
-        floorMossBlocks.addAll(floorCornerMap.keySet());
+        //Add everything in floorMap and floorCornerMap except water, clay, and moss.
+        for (BlockPos pos : floorMap.keySet()) {
+            if (!world.getBlockState(pos).is(Blocks.WATER) && !world.getBlockState(pos).is(Blocks.CLAY) && !world.getBlockState(pos).is(CCBBlocks.MOSS_BLOCK.get())) {
+                floorMossBlocks.add(pos);
+            }
+        }
+        for (BlockPos pos : floorCornerMap.keySet()) {
+            if (!world.getBlockState(pos).is(Blocks.WATER) && !world.getBlockState(pos).is(Blocks.CLAY) && !world.getBlockState(pos).is(CCBBlocks.MOSS_BLOCK.get())) {
+                floorMossBlocks.add(pos);
+            }
+        }
 
-        ArrayList<BlockPos> toAdd = new ArrayList<>();
-        ArrayList<BlockPos> toRemove = new ArrayList<>();
+        //Add extra moss
+        ArrayList<BlockPos> convertedMossBlocks = new ArrayList<>();
         for (BlockPos pos : floorMossBlocks) {
-            //Remove any clay and water (don't replace them with moss)
-            if (world.getBlockState(pos).is(Blocks.CLAY)) {
-                toRemove.add(pos);
-                exposedClayBlocks.add(pos);
-                continue;
-            } else if (world.getBlockState(pos).is(Blocks.WATER)) {
-                toRemove.add(pos);
-                waterBlocks.add(pos);
-                continue;
+            //Replace walls adjacent to air above moss with moss.
+            for (int i = 1; i <= RandomGenerators.MossFloorUpAdj(); i++) {
+                if (spreadMap.containsKey(pos.above(i))) {
+                    nonexposedMossBlocks.addAll(wallAdjacentMap.get(pos.above(i)));
+                }
             }
 
-            //Add a bit where it tries to add nearby wall blocks to toAdd.
+            //Replace walls below moss with moss.
+            if (wallMap.containsKey(pos.below())) {
+                for (int i = 1; i <= RandomGenerators.MossDown(); i++) {
+                    if (wallMap.containsKey(pos.below(i))) {
+                        nonexposedMossBlocks.add(pos.below(i));
+                    }
+                }
+            }
+            //Replace adjacent non-underwater clay with moss
+            for (Direction direction : Direction.values()) {
+                if (world.getBlockState(pos.relative(direction)).is(Blocks.CLAY) || exposedClayBlocks.contains(pos.relative(direction)) || nonexposedClayBlocks.contains(pos.relative(direction))) {
+                    if (!world.getBlockState(pos.relative(direction).above()).getMaterial().isLiquid() && !waterBlocks.contains(pos.relative(direction).above())) {
+                        convertedMossBlocks.add(pos.relative(direction));
+                    }
+                }
+            }
 
 
-            finalPlacementMap.put(pos, CCBBlocks.MOSS_BLOCK.get().defaultBlockState());
+            placementMaps(pos, CCBBlocks.MOSS_BLOCK.get().defaultBlockState(), defaultDistance(pos));
         }
-        for (BlockPos pos : toRemove) {
-            floorMossBlocks.remove(pos);
-        }
-
-
-        for (BlockPos pos : toAdd) {
+        for (BlockPos pos : convertedMossBlocks) {
+            placementMaps(pos, CCBBlocks.MOSS_BLOCK.get().defaultBlockState(), defaultDistance(pos));
             floorMossBlocks.add(pos);
-            finalPlacementMap.put(pos, CCBBlocks.MOSS_BLOCK.get().defaultBlockState());
+            if (world.getBlockState(pos.above()).is(SpeleogenesisBlockTags.DRIPLEAF)) {
+                removeClayDecorations(pos);
+            }
         }
+
+        //Don't add nonexposed moss to the final placement map yet; it'll be added in the ceiling phase
     }
 
     private void pondFloor() {
@@ -431,11 +456,11 @@ public class LushGeneratorEntity extends Entity {
                     if (world.getBlockState(entry.getKey().relative(direction)).is(Blocks.WATER)) {
                         //Handle dripleaf
                         if (world.getBlockState(entry.getKey().above()).is(CCBBlocks.SMALL_DRIPLEAF.get())) {
-                            finalPlacementMap.put(entry.getKey().above(), Blocks.AIR.defaultBlockState());
-                            finalPlacementMap.put(entry.getKey().above(2), Blocks.AIR.defaultBlockState());
+                            placementMaps(entry.getKey().above(), Blocks.AIR.defaultBlockState(), defaultDistance(entry.getKey())+1);
+                            placementMaps(entry.getKey().above(2), Blocks.AIR.defaultBlockState(), defaultDistance(entry.getKey())+1);
                         } else if (world.getBlockState(entry.getKey().above()).is(CCBBlocks.BIG_DRIPLEAF_STEM.get())) {
                             Direction facing = world.getBlockState(entry.getKey().above()).getValue(BigDripleafStemBlock.FACING);
-                            finalPlacementMap.put(entry.getKey().above(), CCBBlocks.BIG_DRIPLEAF_STEM.get().defaultBlockState().setValue(BigDripleafStemBlock.FACING, facing).setValue(BlockStateProperties.WATERLOGGED, true));
+                            placementMaps(entry.getKey().above(), CCBBlocks.BIG_DRIPLEAF_STEM.get().defaultBlockState().setValue(BigDripleafStemBlock.FACING, facing).setValue(BlockStateProperties.WATERLOGGED, true), defaultDistance(entry.getKey())+1);
                         }
                         notClay = true;
                         break;
@@ -615,16 +640,16 @@ public class LushGeneratorEntity extends Entity {
 
         //Add water and clay to placement
         for (BlockPos pos : waterBlocks) {
-            finalPlacementMap.put(pos, Blocks.WATER.defaultBlockState());
+            placementMaps(pos, Blocks.WATER.defaultBlockState(), defaultDistance(pos));
         }
         for (BlockPos pos : exposedClayBlocks) {
-            finalPlacementMap.put(pos, Blocks.CLAY.defaultBlockState());
+            placementMaps(pos, Blocks.CLAY.defaultBlockState(), defaultDistance(pos));
         }
         for (BlockPos pos : nonexposedClayBlocks) {
-            finalPlacementMap.put(pos, Blocks.CLAY.defaultBlockState());
+            placementMaps(pos, Blocks.CLAY.defaultBlockState(), defaultDistance(pos));
         }
 //        for (BlockPos pos : additionalClayList) {
-//            finalPlacementMap.put(pos, Blocks.OBSIDIAN.defaultBlockState());
+//            placementMaps(pos, Blocks.OBSIDIAN.defaultBlockState());
 //        }
     }
 
@@ -653,7 +678,7 @@ public class LushGeneratorEntity extends Entity {
                 //Add mapped blocks to the bald spot
                 for (BlockPos pos : pattern.returnMap().keySet()) {
                     for (int j = -2; j <= 2; j++) {
-                        mosslessCeiling.add(pos.above(j));
+                        bareCeiling.add(pos.above(j));
                     }
                 }
             }
@@ -685,7 +710,7 @@ public class LushGeneratorEntity extends Entity {
             if (world.getBlockState(pos).is(CCBBlocks.MOSS_BLOCK.get())) {
                 continue;
             }
-            if (!mosslessCeiling.contains(pos)) {
+            if (!bareCeiling.contains(pos)) {
                 ceilingMossBlocks.add(pos);
 
                 //Add 1-3 wall blocks above ceiling blocks
@@ -708,11 +733,6 @@ public class LushGeneratorEntity extends Entity {
                         additionalCeilingMoss.addAll(wallAdjacentMap.get(pos.below(i)));
                     }
                 }
-
-
-            } else {
-                //Testing:
-//                finalPlacementMap.put(pos, Blocks.REDSTONE_BLOCK.defaultBlockState());
             }
         }
 
@@ -721,11 +741,10 @@ public class LushGeneratorEntity extends Entity {
 
         //Register moss to finalPlacementMap
         for (BlockPos pos : ceilingMossBlocks) {
-            finalPlacementMap.put(pos, CCBBlocks.MOSS_BLOCK.get().defaultBlockState());
+            placementMaps(pos, CCBBlocks.MOSS_BLOCK.get().defaultBlockState(), defaultDistance(pos));
         }
         for (BlockPos pos : nonexposedMossBlocks) {
-            finalPlacementMap.put(pos, CCBBlocks.MOSS_BLOCK.get().defaultBlockState());
-//            finalPlacementMap.put(pos, Blocks.LAPIS_BLOCK.defaultBlockState());
+            placementMaps(pos, CCBBlocks.MOSS_BLOCK.get().defaultBlockState(), defaultDistance(pos));
         }
 
     }
@@ -758,30 +777,30 @@ public class LushGeneratorEntity extends Entity {
                 double d = random.nextDouble();
                 if (d < 0.08) {
                     //Azalea
-                    finalPlacementMap.put(pos.above(), CCBBlocks.AZALEA.get().defaultBlockState());
+                    placementMaps(pos.above(), CCBBlocks.AZALEA.get().defaultBlockState(), defaultDistance(pos)+1);
                 }
                 else if (d < 0.1) {
                     //Flowering azalea
-                    finalPlacementMap.put(pos.above(), CCBBlocks.FLOWERING_AZALEA.get().defaultBlockState());
+                    placementMaps(pos.above(), CCBBlocks.FLOWERING_AZALEA.get().defaultBlockState(), defaultDistance(pos)+1);
                 }
                 else if (d < .65) {
                     //Grass
-                    finalPlacementMap.put(pos.above(),Blocks.GRASS.defaultBlockState());
+                    placementMaps(pos.above(),Blocks.GRASS.defaultBlockState(), defaultDistance(pos)+1);
                 }
                 else if (d < .75) {
                     //Tall grass
                     //If it doesn't fit, just normal grass
                     //Doesn't seem to be working?
                     if (doubleHigh) {
-                        finalPlacementMap.put(pos.above(),Blocks.TALL_GRASS.defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.LOWER));
-                        finalPlacementMap.put(pos.above(2),Blocks.TALL_GRASS.defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER));
+                        placementMaps(pos.above(),Blocks.TALL_GRASS.defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.LOWER), defaultDistance(pos)+1);
+                        placementMaps(pos.above(2),Blocks.TALL_GRASS.defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER), defaultDistance(pos)+1);
                     } else {
-                        finalPlacementMap.put(pos.above(),Blocks.GRASS.defaultBlockState());
+                        placementMaps(pos.above(),Blocks.GRASS.defaultBlockState(), defaultDistance(pos)+1);
                     }
                 }
                 else if (d < .95) {
                     //Moss carpet
-                    finalPlacementMap.put(pos.above(),CCBBlocks.MOSS_CARPET.get().defaultBlockState());
+                    placementMaps(pos.above(),CCBBlocks.MOSS_CARPET.get().defaultBlockState(), defaultDistance(pos)+1);
                 }
 
 
@@ -832,7 +851,7 @@ public class LushGeneratorEntity extends Entity {
             boolean place = false;
             if (ceilingMossBlocks.contains(pos)) {
                 place = true;
-            } else if (mosslessCeiling.contains(pos) && !world.getBlockState(pos).is(CCBBlocks.MOSS_BLOCK.get())) {
+            } else if (bareCeiling.contains(pos) && !world.getBlockState(pos).is(CCBBlocks.MOSS_BLOCK.get())) {
                 place = true;
             }
 
@@ -840,7 +859,7 @@ public class LushGeneratorEntity extends Entity {
                 double d = random.nextDouble();
                 //Spore blossoms only place on moss
                 if (d < 0.005 && ceilingMossBlocks.contains(pos)) {
-                    finalPlacementMap.put(pos.below(), CCBBlocks.SPORE_BLOSSOM.get().defaultBlockState());
+                    placementMaps(pos.below(), CCBBlocks.SPORE_BLOSSOM.get().defaultBlockState(), defaultDistance(pos)+1);
                 } else if (d < 0.15) {
                     placeCaveVine(pos);
                 }
@@ -854,15 +873,23 @@ public class LushGeneratorEntity extends Entity {
 
         //Work from the wall list, but make sure to only place in the spread map!
 
-        ArrayList<BlockPos> ceilingAndWall = new ArrayList<>();
-        ceilingAndWall.addAll(ceilingMap.keySet());
-        ceilingAndWall.addAll(wallMap.keySet());
+        ArrayList<BlockPos> targetPositions = new ArrayList<>();
+        for (BlockPos pos : ceilingMap.keySet()) {
+            targetPositions.add(pos.below());
+        }
+        targetPositions.addAll(wallAdjacentMap.keySet());
 
-        for (BlockPos pos : ceilingAndWall) {
+        for (BlockPos pos : targetPositions) {
+            if (finalPlacementMap.containsKey(pos)) {
+                continue;
+            }
+            if (!filter(pos, world)) {
+                continue;
+            }
             if (random.nextDouble() < 0.01) {
-                placePatch(pos, true);
+                placePatch(pos, true, targetPositions);
             } else if (random.nextDouble() < 0.02) {
-                placePatch(pos, false);
+                placePatch(pos, false, targetPositions);
             }
         }
     }
@@ -890,9 +917,11 @@ public class LushGeneratorEntity extends Entity {
                 chatPrint("Tried to place a block not in the placement map", world);
             }
             else if (entry.getValue() < dist) {
-                if (world.getBlockState(entry.getKey()).is(CCBBlockTags.LUSH_GROUND_REPLACEABLE) || world.getBlockState(entry.getKey()).getMaterial() == Material.AIR) {
-                    world.setBlock(entry.getKey(), finalPlacementMap.get(entry.getKey()), 3);
+                if (Util.replaceableOrAir(world, entry.getKey())) {
+                    world.setBlock(entry.getKey(), finalPlacementMap.get(entry.getKey()), 2);
                 }
+                finalPlacementMap.remove(entry.getKey());
+                distanceMap.remove(entry.getKey());
             }
         }
     }
@@ -923,14 +952,14 @@ public class LushGeneratorEntity extends Entity {
                     if (waterBlocks.contains(pos.above()) && i == 1) {
                         state = state.setValue(BlockStateProperties.WATERLOGGED, true);
                     }
-                    finalPlacementMap.put(pos.above(i), state);
+                    placementMaps(pos.above(i), state, defaultDistance(pos)+i);
                 }
             }
             BlockState state = CCBBlocks.BIG_DRIPLEAF.get().defaultBlockState().setValue(BigDripleafBlock.FACING, face);
             if (waterBlocks.contains(pos.above()) && height == 1) {
                 state = state.setValue(BlockStateProperties.WATERLOGGED, true);
             }
-            finalPlacementMap.put(pos.above(height), state);
+            placementMaps(pos.above(height), state, defaultDistance(pos)+height);
 
         } else {
             //Don't place if the ceiling's too low.
@@ -942,8 +971,8 @@ public class LushGeneratorEntity extends Entity {
             if (waterBlocks.contains(pos.above())) {
                 state = state.setValue(BlockStateProperties.WATERLOGGED, true);
             }
-            finalPlacementMap.put(pos.above(), state);
-            finalPlacementMap.put(pos.above(2),CCBBlocks.SMALL_DRIPLEAF.get().defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER).setValue(SmallDripleafBlock.FACING, face));
+            placementMaps(pos.above(), state, defaultDistance(pos)+1);
+            placementMaps(pos.above(2),CCBBlocks.SMALL_DRIPLEAF.get().defaultBlockState().setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER).setValue(SmallDripleafBlock.FACING, face), defaultDistance(pos)+1);
         }
 
 
@@ -963,60 +992,81 @@ public class LushGeneratorEntity extends Entity {
 
         for (int i = 1; i < vineLength; i++) {
             if (random.nextDouble() < 0.11) {
-                finalPlacementMap.put(pos.below(i), CCBBlocks.CAVE_VINES_PLANT.get().defaultBlockState().setValue(ICaveVines.BERRIES, true));
+                placementMaps(pos.below(i), CCBBlocks.CAVE_VINES_PLANT.get().defaultBlockState().setValue(ICaveVines.BERRIES, true), defaultDistance(pos)+i);
             } else {
-                finalPlacementMap.put(pos.below(i), CCBBlocks.CAVE_VINES_PLANT.get().defaultBlockState().setValue(ICaveVines.BERRIES, false));
+                placementMaps(pos.below(i), CCBBlocks.CAVE_VINES_PLANT.get().defaultBlockState().setValue(ICaveVines.BERRIES, false), defaultDistance(pos)+i);
             }
         }
         if (random.nextDouble() < 0.11) {
-            finalPlacementMap.put(pos.below(vineLength), CCBBlocks.CAVE_VINES.get().defaultBlockState().setValue(ICaveVines.BERRIES, true).setValue(AbstractPlantStemBlock.AGE, 25));
+            placementMaps(pos.below(vineLength), CCBBlocks.CAVE_VINES.get().defaultBlockState().setValue(ICaveVines.BERRIES, true).setValue(AbstractPlantStemBlock.AGE, 25), defaultDistance(pos)+vineLength);
         } else {
-            finalPlacementMap.put(pos.below(vineLength), CCBBlocks.CAVE_VINES.get().defaultBlockState().setValue(ICaveVines.BERRIES, false).setValue(AbstractPlantStemBlock.AGE, 25));
+            placementMaps(pos.below(vineLength), CCBBlocks.CAVE_VINES.get().defaultBlockState().setValue(ICaveVines.BERRIES, false).setValue(AbstractPlantStemBlock.AGE, 25), defaultDistance(pos)+vineLength);
         }
 
     }
 
-    private void placePatch(BlockPos pos, Boolean lichen) {
-        BlockPos origin = pos;
-        boolean succeeded = false;
-
+    private void placePatch(BlockPos pos, boolean lichen, ArrayList<BlockPos> targetPositions) {
         //Sizes appear to be always 1
-        int size = random.nextInt(10)+1;
-        Block placeBlock = lichen ? CCBBlocks.GLOW_LICHEN.get() : Blocks.VINE;
-        BlockState placeState = placeBlock.defaultBlockState();
-        for (Direction direction : Direction.values()) {
-            if (spreadMap.containsKey(pos.relative(direction))) {
-                succeeded = true;
-                origin = pos.relative(direction);
+        int size = RandomGenerators.patchSize();
+        SpreadPattern pattern = new SpreadPattern(world, pos, size, size);
+        pattern.growBlockMap(100);
+        for (BlockPos targetPos : pattern.returnMap().keySet()) {
+            if (!world.getBlockState(targetPos).isAir(world, targetPos)) {
+                continue;
             }
-        }
-        if (succeeded)  {
-            SpreadPattern pattern = new SpreadPattern(world, origin, size, size);
-            pattern.growBlockMap(100);
-            for (BlockPos targetPos : pattern.returnMap().keySet()) {
-                //If adjacent to ceiling or wall
-                boolean adjacent = false;
-                for (Direction direction : Direction.values()) {
-                    if (ceilingMap.containsKey(targetPos.relative(direction)) || wallMap.containsKey(targetPos.relative(direction))) {
-                        adjacent = true;
-                        break;
+            if (!targetPositions.contains(targetPos)) {
+                continue;
+            }
+            BlockState placeState = lichen ? CCBBlocks.GLOW_LICHEN.get().defaultBlockState(): Blocks.VINE.defaultBlockState();
+            for (Direction direction : Direction.values()) {
+                if (lichen) {
+                    if (direction != Direction.DOWN && world.getBlockState(targetPos.relative(direction)).is(SpeleogenesisBlockTags.GLOW_LICHEN_PLACEMENT)) {
+                        placeState = ((GlowLichenBlock)CCBBlocks.GLOW_LICHEN.get()).withDirection(placeState, world, targetPos, direction);
+                    }
+                } else {
+                    if (direction != Direction.DOWN && VineBlock.isAcceptableNeighbour(world, targetPos.relative(direction), direction)) {
+                        placeState = placeState.setValue(VineBlock.getPropertyForFace(direction), true);
                     }
                 }
-
-                //If nothing is there yet
-                boolean unoccupied = !finalPlacementMap.containsKey(pos);
-
-                if (unoccupied && adjacent) {
-                    finalPlacementMap.put(targetPos, Blocks.LAPIS_BLOCK.defaultBlockState());
-//                    finalPlacementMap.put(targetPos, placeState);
-                }
             }
+//            placementMaps(targetPos, Blocks.LAPIS_BLOCK.defaultBlockState());
+            placementMaps(targetPos, placeState, defaultDistance(pos)+2);
         }
-
     }
 
-    private void plantAzaleaTree(BlockPos pos) {}
+//    private void placeLichen(BlockPos pos) {
+//        BlockPos.Mutable mutable = pos.mutable();
+//        Iterator var7 = Arrays.stream(Direction.values()).toList().iterator();
+//
+//        Direction direction;
+//        BlockState blockState;
+//        do {
+//            if (!var7.hasNext()) {
+//                return false;
+//            }
+//
+//            direction = (Direction)var7.next();
+//            blockState = reader.getBlockState(mutable.setWithOffset(pos, direction));
+//        } while(!config.canGrowOn(blockState.getBlock()));
+//
+//        GlowLichenBlock glowLichenBlock = (GlowLichenBlock)CCBBlocks.GLOW_LICHEN.get();
+//        BlockState directionalState = glowLichenBlock.withDirection(state, reader, pos, direction);
+//        if (directionalState == null) {
+//            return false;
+//        } else {
+//            reader.setBlock(pos, directionalState, 3);
+//            reader.getChunk(pos).markPosForPostprocessing(pos);
+//            if (random.nextFloat() < config.chanceOfSpreading) {
+//                glowLichenBlock.trySpreadRandomly(directionalState, reader, pos, direction, random, true);
+//            }
+//
+//            return true;
+//        }
+//    }
 
+    private void plantAzaleaTree(BlockPos pos) {
+
+    }
 
     private int ceilingHeight(BlockPos pos) {
         BlockPos origin = pos;
@@ -1065,7 +1115,6 @@ public class LushGeneratorEntity extends Entity {
         }
     }
 
-
     private void removeMossDecorations(BlockPos pos) {
         BlockState blockAbove = world.getBlockState(pos.above());
         Block bab = blockAbove.getBlock();
@@ -1073,11 +1122,32 @@ public class LushGeneratorEntity extends Entity {
             return;
         }
         if (bab == CCBBlocks.AZALEA.get() || bab == CCBBlocks.MOSS_CARPET.get() || bab == CCBBlocks.FLOWERING_AZALEA.get() || bab == Blocks.GRASS) {
-            finalPlacementMap.put(pos.above(), Blocks.GLASS.defaultBlockState());
+            placementMaps(pos.above(), Blocks.GLASS.defaultBlockState(), defaultDistance(pos)+1);
         } else if (bab == Blocks.TALL_GRASS) {
-            finalPlacementMap.put(pos.above(), Blocks.GLASS.defaultBlockState());
-            finalPlacementMap.put(pos.above(2), Blocks.GLASS.defaultBlockState());
+            placementMaps(pos.above(), Blocks.GLASS.defaultBlockState(), defaultDistance(pos)+1);
+            placementMaps(pos.above(2), Blocks.GLASS.defaultBlockState(), defaultDistance(pos)+1);
         }
+    }
+
+    private void removeClayDecorations(BlockPos pos) {
+        for (int i = 1; i < 6; i++) {
+            if (world.getBlockState(pos.above(i)).is(SpeleogenesisBlockTags.DRIPLEAF)) {
+                placementMaps(pos.above(i), Blocks.AIR.defaultBlockState(), defaultDistance(pos));
+            } else {
+                return;
+            }
+        }
+
+    }
+
+
+    private void placementMaps(BlockPos pos, BlockState state, double dist) {
+        finalPlacementMap.put(pos, state);
+        distanceMap.put(pos, dist);
+    }
+
+    private double defaultDistance(BlockPos pos) {
+        return Math.sqrt(pos.distSqr(origin));
     }
 
 

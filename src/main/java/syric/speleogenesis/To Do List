@@ -60,13 +60,13 @@
 //DONE Use the VinesFeature as an example.
 
 //TODO  12) Placement
-//TODO  Actually place everything!
-//TODO  Place water, clay, and moss in the first sweep; decorations in the second (so they don't break instantly).
-//TODO  Make sure decorations don't break instantly.
+//DONE  Actually place everything!
+//DONE  Place water, clay, and moss in the first sweep; decorations in the second (so they don't break instantly).
+//DONE  Make sure decorations don't break instantly.
 //TODO  When placing things, make sure they're replaceable. Air counts. Water source blocks do not. Clay shouldn't get replaced but that doesn't need to be a rule I think? Extant moss is occasionally replaced (by clay). Decorations shouldn't get fucked with.
-//TODO  Ripple placement
+//DONE  Ripple placement
 //TODO  Pulse ripple placement
-//TODO  Fancy ripple placement that ripples along vines and big dripleaf
+//DONE  Fancy ripple placement that ripples along vines and big dripleaf
 //TODO  (Shouldn't ripple up tall grass. For tall dripleaf, maybe register all spots as big dripleaf, and convert ones lower down into stems whenever you place? Can I make rippling vines work similarly, the tip growing from tip to main body in realtime? Should they feed out from the bottom, or just add to the tip? I prefer the latter.)
 //TODO  Placement shouldn't involve breaking, but some equivalent particle effects and block sounds wouldn't go amiss.
 
@@ -82,7 +82,7 @@
 //TODO  Decorations placing on each other on repeated throws (azaleas and moss carpets replacing the bottom half of double grass) FIXED?
 //DONE  Ceiling stone patches too small (multiple threads from each bare spot? a different patch generation method?)
 //TODO  Improve overlap with existing lush caves terrain
-//TODO  Gravel falling on placement done?
+//TODO  Gravel falling on placement DONE?
 //TODO  Projectile looks like an ender pearl
 //TODO  Check that partial pool shrinking is working!
 //TODO  Check that all for-loop variables are referenced correctly.
