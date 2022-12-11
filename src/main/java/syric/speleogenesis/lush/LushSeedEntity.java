@@ -5,6 +5,9 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.projectile.ProjectileItemEntity;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.network.IPacket;
+import net.minecraft.network.play.server.SSpawnObjectPacket;
 import net.minecraft.particles.IParticleData;
 import net.minecraft.particles.ItemParticleData;
 import net.minecraft.particles.ParticleTypes;
@@ -14,8 +17,11 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.fml.network.NetworkHooks;
 import syric.speleogenesis.SpeleogenesisEntityTypes;
 import syric.speleogenesis.SpeleogenesisItems;
+
+import javax.annotation.Nonnull;
 
 import static syric.speleogenesis.Speleogenesis.chatPrint;
 
@@ -26,11 +32,17 @@ public class LushSeedEntity extends ProjectileItemEntity {
     }
 
     public LushSeedEntity(World world, LivingEntity entity) {
-        super(EntityType.ENDER_PEARL, entity, world);
+        super(SpeleogenesisEntityTypes.LUSH_SEED.get(), entity, world);
     }
 
     public LushSeedEntity(World world, double d1, double d2, double d3) {
         super(SpeleogenesisEntityTypes.LUSH_SEED.get(), d1, d2, d3, world);
+    }
+
+
+    @Override
+    public IPacket<?> getAddEntityPacket() {
+        return NetworkHooks.getEntitySpawningPacket(this);
     }
 
     @Override
@@ -41,7 +53,7 @@ public class LushSeedEntity extends ProjectileItemEntity {
 
     @OnlyIn(Dist.CLIENT)
     private IParticleData getParticle() {
-        return new ItemParticleData(ParticleTypes.ITEM, this.getItemRaw());
+        return new ItemParticleData(ParticleTypes.ITEM, new ItemStack(getDefaultItem()));
     }
 
     @OnlyIn(Dist.CLIENT)
@@ -71,7 +83,7 @@ public class LushSeedEntity extends ProjectileItemEntity {
             lushGenerator.moveTo(this.getX(), this.getY(), this.getZ(), this.yRot, 0.0F);
             this.level.addFreshEntity(lushGenerator);
             lushGenerator.setTraceResult(result);
-            chatPrint("Lush Seed Explodes", this.level);
+//            chatPrint("Lush Seed Explodes", this.level);
 
             this.level.broadcastEntityEvent(this, (byte)3);
             this.remove();

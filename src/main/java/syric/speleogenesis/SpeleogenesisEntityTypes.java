@@ -26,10 +26,11 @@ public class SpeleogenesisEntityTypes {
 //                    EntityType.Builder.<LushSeedEntity>of(LushSeedEntity::new, EntityClassification.MISC)
 //                            .sized(0.25F, 0.25F).clientTrackingRange(4).updateInterval(10));
 
-    public static final RegistryObject<EntityType<LushSeedEntity>> LUSH_SEED = ENTITY_TYPES.register("lush_seed",
-            () -> EntityType.Builder.<LushSeedEntity>of(LushSeedEntity::new, EntityClassification.MISC).sized(0.25F, 0.25F).clientTrackingRange(4).updateInterval(10).build("lush_seed"));
-    public static final RegistryObject<EntityType<LushGeneratorEntity>> LUSH_GENERATOR = ENTITY_TYPES.register("lush_generator",
-            () -> EntityType.Builder.<LushGeneratorEntity>of(LushGeneratorEntity::new, EntityClassification.MISC).sized(0.25F, 0.25F).clientTrackingRange(4).updateInterval(10).build("lush_seed"));
+    public static final RegistryObject<EntityType<LushSeedEntity>> LUSH_SEED = registerEntity("lush_seed",
+            EntityType.Builder.<LushSeedEntity>of(LushSeedEntity::new, EntityClassification.MISC).sized(0.25F, 0.25F).clientTrackingRange(4).updateInterval(10));
+
+    public static final RegistryObject<EntityType<LushGeneratorEntity>> LUSH_GENERATOR = registerEntity("lush_generator",
+            EntityType.Builder.<LushGeneratorEntity>of(LushGeneratorEntity::new, EntityClassification.MISC).sized(0.25F, 0.25F).clientTrackingRange(4).updateInterval(10));
 
 
     private static <T extends Entity> RegistryObject<EntityType<T>> registerEntity(String entityName, EntityType.Builder<T> builder) {

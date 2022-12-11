@@ -82,8 +82,8 @@
 //TODO  Decorations placing on each other on repeated throws (azaleas and moss carpets replacing the bottom half of double grass) FIXED?
 //DONE  Ceiling stone patches too small (multiple threads from each bare spot? a different patch generation method?)
 //TODO  Improve overlap with existing lush caves terrain
-//TODO  Gravel falling on placement DONE?
-//TODO  Projectile looks like an ender pearl
+//TODO  Gravel falling on placement
+//DONE  Projectile looks like an ender pearl
 //TODO  Check that partial pool shrinking is working!
 //TODO  Check that all for-loop variables are referenced correctly.
 //DONE  Allow replacement of gravel
@@ -100,6 +100,7 @@
 //DONE  Dripleaf placing not waterlogged
 //TODO  Clay sometimes overhangs water for some reason. Done?
 //TODO  Perhaps clay doesn't place outside the range? Done?
+//TODO  Multiple simultaneous throws produce floating decorations
 
 
 

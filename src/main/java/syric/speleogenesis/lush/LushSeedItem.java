@@ -20,8 +20,8 @@ public class LushSeedItem extends Item {
         world.playSound((PlayerEntity)null, player.getX(), player.getY(), player.getZ(), SoundEvents.SNOWBALL_THROW, SoundCategory.NEUTRAL, 0.5F, 0.4F / (random.nextFloat() * 0.4F + 0.8F));
         if (!world.isClientSide) {
             LushSeedEntity lushSeedEntity = new LushSeedEntity(world, player);
-//            lushSeedEntity.setItem(itemstack);
-            lushSeedEntity.setItem(new ItemStack(SpeleogenesisItems.LUSH_SEED.get()));
+            lushSeedEntity.setItem(itemstack);
+//            lushSeedEntity.setItem(new ItemStack(SpeleogenesisItems.LUSH_SEED.get()));
             lushSeedEntity.shootFromRotation(player, player.xRot, player.yRot, 0.0F, 1.5F, 0.0F);
             world.addFreshEntity(lushSeedEntity);
         }
