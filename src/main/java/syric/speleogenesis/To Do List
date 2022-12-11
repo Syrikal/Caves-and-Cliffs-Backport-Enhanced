@@ -67,10 +67,12 @@
 //DONE  Ripple placement
 //TODO  Pulse ripple placement
 //DONE  Fancy ripple placement that ripples along vines and big dripleaf
-//TODO  (Shouldn't ripple up tall grass. For tall dripleaf, maybe register all spots as big dripleaf, and convert ones lower down into stems whenever you place? Can I make rippling vines work similarly, the tip growing from tip to main body in realtime? Should they feed out from the bottom, or just add to the tip? I prefer the latter.)
+//TODO  Fancier ripple placement that has tall dripleaf and long vines grow naturally
 //TODO  Placement shouldn't involve breaking, but some equivalent particle effects and block sounds wouldn't go amiss.
 
 //TODO  13) Azalea tree outside
+
+//TODO  14) Spawn axolotls
 
 
 
@@ -98,15 +100,16 @@
 //TODO  Remove water before placing clay? Decide.
 //DONE  Small dripleaf top not placing
 //DONE  Dripleaf placing not waterlogged
-//TODO  Clay sometimes overhangs water for some reason. Done?
-//TODO  Perhaps clay doesn't place outside the range? Done?
-//TODO  Multiple simultaneous throws produce floating decorations
+//TODO  Clay sometimes overhangs water for some reason. Fixed?
+//TODO  Perhaps clay shouldn't place outside the range?
+//TODO  Multiple simultaneous throws produce floating decorations and other problems
+//TODO  Lichen occasionally generates as a cube
 
 
 
 //  IDEAS
 
-//TODO  A version rechargeable with (lots of) xp
+//TODO  A version rechargeable with (lots of) xp (enchant w/ mending?)
 //TODO  A *very big* version
 //TODO  If I get noise pools to work, versions that are automatically pools and moss, ignoring noise
 //TODO  An anti-griefing mode where if it detects player-placed blocks in the area it won't allow it?
@@ -114,10 +117,17 @@
 //TODO  A model for the generator (end crystal?)
 //TODO  Alternate configurable placement modes: smooth, pulse
 //TODO  A totem block that spawns axolotls?
+//TODO  Add seed to chest loot
 
 
 
 //  DRIPSTONE
+
+//TODO 1) Investigate dripstone caves to see what they should look like
+
+//TODO 2) Placing blocks
+
+//TODO 3) Placing pointed dripstone
 
 //TODO  Some kind of column detection?
 
@@ -125,11 +135,10 @@
 
 //  OTHER CAVE TYPES
 
-//TODO  Other Cave Types
-//TODO  Magmatic
+//TODO  Magmatic (Underground Wilderness mimic? Improves on lava pools?)
 //TODO  End Incursion (BetterEnd integration?)
 //TODO  Nether Incursion
 //TODO  Glowworm
 //TODO  Icy
 //TODO  Deep Dark
-//TODO  Quark integration?
+//TODO  Quark cave biome integration?
