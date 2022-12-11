@@ -10,7 +10,7 @@
 //NOPE  3) Register all existing clay, water, moss, and decorations.
 
 //DONE  4) Get a list of all adjacent blocks (replacement candidates).
-//DONE  Split list into ceiling, floor, floorcorner, wall
+//DONE  Split list into ceiling, floor, floor-corner, wall
 //DONE  In some kind of multimap, register wall blocks linked to whatever adjacent spread blocks there are.
 
 //DONE  5) Ceiling
@@ -24,10 +24,10 @@
 //TODO  6) Pool regions
 //TODO  Decide on pool regions.
 //DONE  In pool regions, place water in floor. Don't count existing clay or moss as targets! Do include all existing water here.
-//DONE  Surround floor water with clay, and replace any floorcorners with clay.
+//DONE  Surround floor water with clay, and replace any floor-corners with clay.
 //DONE  This can partially replace existing moss, including all moss that's underwater.
 //DONE  It should delete any decorations on that moss if it does!
-//DONE  Remove some water depending on number of adjacent nonwater blocks.
+//DONE  Remove some water depending on number of adjacent non-water blocks.
 //DONE  Shrink and remove pools at random.
 //DONE  Replace walls above clay with clay.
 //DONE  Replace walls below clay with clay.
@@ -36,9 +36,9 @@
 //NOPE  Replace a little bit of the newly-placed clay with moss. (Nothing underwater.) DECIDED AGAINST
 
 //DONE  7) Moss floor regions
-//DONE  Replace floor and floorcorner with moss. Don't count existing clay, moss, or water!
+//DONE  Replace floor and floor-corner with moss. Don't count existing clay, moss, or water!
 //DONE  Replace walls below moss with moss.
-//DONE  Replace walls adjcent to air above moss with moss.
+//DONE  Replace walls adjacent to air above moss with moss.
 //DONE Replace clay adjacent to moss with moss.
 
 //DONE 8) Dripleaf decorations
@@ -91,7 +91,7 @@
 //DONE  Allow replacement of gravel
 //DONE  Run the edge clay replacement twice?
 //DONE  Make custom probability distributions for number of blocks replaced above/below-adjacent/above-adjacent moss and clay
-//DONE  Floor decorations place on nonreplaceables that were supposed to get replaced
+//DONE  Floor decorations place on non-replaceables that were supposed to get replaced
 //DONE  Dripleaf should be rarer
 //DONE  Clay should replace walls below itself
 //DONE  Fill in water less
