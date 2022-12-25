@@ -1,6 +1,7 @@
 package syric.speleogenesis.lush;
 
 import com.blackgear.cavesandcliffs.common.blocks.*;
+import com.blackgear.cavesandcliffs.common.world.gen.AzaleaSaplingGenerator;
 import com.blackgear.cavesandcliffs.core.other.tags.CCBBlockTags;
 import com.blackgear.cavesandcliffs.core.registries.CCBBlocks;
 import com.google.common.collect.ArrayListMultimap;
@@ -19,6 +20,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.vector.Vector3i;
 import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
 import org.lwjgl.system.CallbackI;
 import syric.speleogenesis.SpeleogenesisBlockTags;
 import syric.speleogenesis.util.RandomGenerators;
@@ -166,7 +168,6 @@ public class LushGeneratorEntity extends Entity {
             //Remove all blocks that are too far away
             //Get all replaceable blocks adjacent to blocks in the map
             //Split adjacent blocks by position
-            //
             else if (!processedMap) {
                 cullMap();
                 createCandidateMap();
@@ -176,7 +177,6 @@ public class LushGeneratorEntity extends Entity {
             }
 
             //Place floor: moss, clay, water
-            //FIGURE OUT WHAT REPLACES WHAT AND WHAT DOESN'T
             else if (!generateFloor) {
                 if (!floorMap.isEmpty() || !floorCornerMap.isEmpty()) {
                     if (random.nextDouble() < 0.3) {
@@ -225,7 +225,92 @@ public class LushGeneratorEntity extends Entity {
         }
     }
 
+    //OLD
+//    private void findOrigin() {
+//        if (traceResult == null) {
+////            chatPrint("Unfinished lush generator found, committing seppuku", world);
+//            this.kill();
+//            return;
+//        }
+//
+//        Vector3i posvector = new Vector3i(traceResult.getLocation().x, traceResult.getLocation().y, traceResult.getLocation().z);
+//        BlockPos hitPos = new BlockPos(posvector);
+//        World world = this.level;
+//        int balance = 0; //Each solid block above adds 1, each below adds 2.
+//        for (int i = -3; i <3; i++) {
+//            if (i >= 0 && world.getBlockState(hitPos.above(i)).isSolidRender(world, hitPos.above(i))) {
+//                balance ++;
+////                world.setBlock(hitPos.above(i), Blocks.LAPIS_BLOCK.defaultBlockState(), 3);
+//            } else if (i < 0 && world.getBlockState(hitPos.above(i)).isSolidRender(world, hitPos.above(i))) {
+//                balance --;
+////                world.setBlock(hitPos.above(i), Blocks.REDSTONE_BLOCK.defaultBlockState(), 3);
+//            }
+//        }
+//        boolean hitCeiling = balance > 0;
+////        chatPrint("HitPos: " + hitPos.getX() + ", " + hitPos.getY() + ", " + hitPos.getZ(), world);
+////        chatPrint("Hit ceiling?: " + hitCeiling, world);
+//        //Find the height of the ceiling, or if it's outdoors.
+//
+//        int ceilingHeight = 0;
+//        boolean outdoors = false;
+//        if (!hitCeiling) {
+//            boolean stop = false;
+//            int distance = 0;
+//            while (!stop) {
+//                if (world.getBlockState(hitPos.above(distance)).isSolidRender(world, hitPos.above(distance))) {
+//                    stop = true;
+//                    ceilingHeight = distance;
+//                } else if (distance < 100) {
+//                    distance++;
+//                } else {
+//                    stop = true;
+//                    outdoors = true;
+//                }
+//            }
+//        } else {
+//            boolean stop = false;
+//            int distance = 1;
+//            while (!stop) {
+//                if (world.getBlockState(hitPos.below(distance)).isSolidRender(world, hitPos.below(distance))) {
+//                    stop = true;
+//                    ceilingHeight = distance-1;
+//                } else if (distance < 100) {
+//                    distance++;
+//                } else {
+//                    stop = true;
+//                    outdoors = true;
+//                }
+//            }
+//        }
+////        chatPrint("Ceiling Height: " + ceilingHeight, world);
+//
+//        if (outdoors) {
+//            //Plant an azalea tree
+//            foundOrigin = true;
+//            outdoors = true;
+//            origin = hitPos;
+//        }
+//
+//
+//        //Choose a block four blocks vertically from the surface, or halfway between floor and ceiling.
+//
+//        int originY = 0;
+//        if (ceilingHeight > 8) {
+//            originY = hitCeiling ? hitPos.getY() - 4 : hitPos.getY() + 4;
+//        } else {
+//            originY = hitCeiling ? hitPos.getY() - ceilingHeight/2: hitPos.getY() + ceilingHeight/2;
+//        }
+//
+//        //MAKE SURE ORIGINPOS IS IN AIR/NONSOLID!
+//        BlockPos originPos = new BlockPos(hitPos.getX(), originY, hitPos.getZ());
+////        chatPrint("Origin pos : " + hitPos.getX() + ", " + originY + ", " + hitPos.getZ(), world);
+//        this.level.addParticle(ParticleTypes.HAPPY_VILLAGER, hitPos.getX(), originY, hitPos.getZ(), 0.0D, 0.0D, 0.0D);
+//
+//        foundOrigin = true;
+//        origin = originPos;
+//    }
 
+    //NEW
     private void findOrigin() {
         if (traceResult == null) {
 //            chatPrint("Unfinished lush generator found, committing seppuku", world);
@@ -309,6 +394,7 @@ public class LushGeneratorEntity extends Entity {
         foundOrigin = true;
         origin = originPos;
     }
+
 
     private void cullMap() {
         for (Map.Entry<BlockPos, Double> entry : spreadMap.entrySet()) {
@@ -886,9 +972,10 @@ public class LushGeneratorEntity extends Entity {
             if (!filter(pos, world)) {
                 continue;
             }
-            if (random.nextDouble() < 0.01) {
+            double d = random.nextDouble();
+            if (d < 0.01) {
                 placePatch(pos, true, targetPositions);
-            } else if (random.nextDouble() < 0.02) {
+            } else if (d < 0.02) {
                 placePatch(pos, false, targetPositions);
             }
         }
@@ -918,7 +1005,11 @@ public class LushGeneratorEntity extends Entity {
             }
             else if (entry.getValue() < dist) {
                 if (Util.replaceableOrAir(world, entry.getKey())) {
-                    world.setBlock(entry.getKey(), finalPlacementMap.get(entry.getKey()), 2);
+                    BlockState placeState = finalPlacementMap.get(entry.getKey());
+                    world.setBlock(entry.getKey(), placeState, 2);
+                    if (placeState.getBlock().equals(CCBBlocks.BIG_DRIPLEAF.get()) || placeState.getBlock().is(CCBBlockTags.CAVE_VINES)) {
+                        smoothSpread(entry.getKey(), placeState);
+                    }
                 }
                 finalPlacementMap.remove(entry.getKey());
                 distanceMap.remove(entry.getKey());
@@ -926,11 +1017,24 @@ public class LushGeneratorEntity extends Entity {
         }
     }
 
-    private void setBiome() {}
+    private void smoothSpread(BlockPos newPos, BlockState newState) {
+        //If placed block is big dripleaf and the block below is also big dripleaf,
+        //replace that with a big dripleaf stem with the same orientation.
+        if (newState.is(CCBBlocks.BIG_DRIPLEAF.get()) && world.getBlockState(newPos.below()).is(CCBBlocks.BIG_DRIPLEAF.get())) {
+            Direction face = world.getBlockState(newPos.below()).getValue(BigDripleafBlock.FACING);
+            BlockState placeState = CCBBlocks.BIG_DRIPLEAF_STEM.get().defaultBlockState().setValue(BigDripleafStemBlock.FACING, face);
+            world.setBlock(newPos.below(), placeState, 2);
+            //If placed block is a cave vine tip and the block above is a cave vine tip,
+        //replace that with a cave vine midsection.
+        } else if (newState.is(CCBBlocks.CAVE_VINES.get()) && world.getBlockState(newPos.above()).is(CCBBlocks.CAVE_VINES.get())) {
+            Boolean berries = world.getBlockState(newPos.above()).getValue(ICaveVines.BERRIES);
+            BlockState placeState = CCBBlocks.CAVE_VINES_PLANT.get().defaultBlockState().setValue(ICaveVines.BERRIES, berries);
+            world.setBlock(newPos.above(), placeState, 2);
+        }
+    }
 
     private void removeItems() {}
 
-    //Only if I can't get the biome to work
     private void spawnAxolotls() {}
 
 
@@ -946,20 +1050,31 @@ public class LushGeneratorEntity extends Entity {
         if (big) {
 //            chatPrint("Marking big dripleaf", world);
             int height = RandomGenerators.dripleafHeight(ceilingHeightSubmergedClay(pos));
-            if (height > 1) {
-                for (int i = 1; i < height; i++) {
-                    BlockState state = CCBBlocks.BIG_DRIPLEAF_STEM.get().defaultBlockState().setValue(BigDripleafStemBlock.FACING, face);
-                    if (waterBlocks.contains(pos.above()) && i == 1) {
-                        state = state.setValue(BlockStateProperties.WATERLOGGED, true);
-                    }
-                    placementMaps(pos.above(i), state, defaultDistance(pos)+i);
+
+            //New version that places only the leaf
+            for (int i = 1; i <= height; i++) {
+                BlockState state = CCBBlocks.BIG_DRIPLEAF.get().defaultBlockState().setValue(BigDripleafBlock.FACING, face);
+                if (waterBlocks.contains(pos.above()) && i == 1) {
+                    state = state.setValue(BlockStateProperties.WATERLOGGED, true);
                 }
+                placementMaps(pos.above(i), state, defaultDistance(pos)+i);
             }
-            BlockState state = CCBBlocks.BIG_DRIPLEAF.get().defaultBlockState().setValue(BigDripleafBlock.FACING, face);
-            if (waterBlocks.contains(pos.above()) && height == 1) {
-                state = state.setValue(BlockStateProperties.WATERLOGGED, true);
-            }
-            placementMaps(pos.above(height), state, defaultDistance(pos)+height);
+
+            //Old version that places stem and leaf separately
+//            if (height > 1) {
+//                for (int i = 1; i < height; i++) {
+//                    BlockState state = CCBBlocks.BIG_DRIPLEAF_STEM.get().defaultBlockState().setValue(BigDripleafStemBlock.FACING, face);
+//                    if (waterBlocks.contains(pos.above()) && i == 1) {
+//                        state = state.setValue(BlockStateProperties.WATERLOGGED, true);
+//                    }
+//                    placementMaps(pos.above(i), state, defaultDistance(pos)+i);
+//                }
+//            }
+//            BlockState state = CCBBlocks.BIG_DRIPLEAF.get().defaultBlockState().setValue(BigDripleafBlock.FACING, face);
+//            if (waterBlocks.contains(pos.above()) && height == 1) {
+//                state = state.setValue(BlockStateProperties.WATERLOGGED, true);
+//            }
+//            placementMaps(pos.above(height), state, defaultDistance(pos)+height);
 
         } else {
             //Don't place if the ceiling's too low.
@@ -989,83 +1104,76 @@ public class LushGeneratorEntity extends Entity {
             return;
         }
 
-
-        for (int i = 1; i < vineLength; i++) {
+        //New version that places all tip blocks
+        for (int i = 1; i <= vineLength; i++) {
             if (random.nextDouble() < 0.11) {
-                placementMaps(pos.below(i), CCBBlocks.CAVE_VINES_PLANT.get().defaultBlockState().setValue(ICaveVines.BERRIES, true), defaultDistance(pos)+i);
+                placementMaps(pos.below(i), CCBBlocks.CAVE_VINES.get().defaultBlockState().setValue(ICaveVines.BERRIES, true), defaultDistance(pos)+i);
             } else {
-                placementMaps(pos.below(i), CCBBlocks.CAVE_VINES_PLANT.get().defaultBlockState().setValue(ICaveVines.BERRIES, false), defaultDistance(pos)+i);
+                placementMaps(pos.below(i), CCBBlocks.CAVE_VINES.get().defaultBlockState().setValue(ICaveVines.BERRIES, false), defaultDistance(pos)+i);
             }
         }
-        if (random.nextDouble() < 0.11) {
-            placementMaps(pos.below(vineLength), CCBBlocks.CAVE_VINES.get().defaultBlockState().setValue(ICaveVines.BERRIES, true).setValue(AbstractPlantStemBlock.AGE, 25), defaultDistance(pos)+vineLength);
-        } else {
-            placementMaps(pos.below(vineLength), CCBBlocks.CAVE_VINES.get().defaultBlockState().setValue(ICaveVines.BERRIES, false).setValue(AbstractPlantStemBlock.AGE, 25), defaultDistance(pos)+vineLength);
-        }
+
+        //Old version that places mid and tip separately instead of all tip
+//        for (int i = 1; i < vineLength; i++) {
+//            if (random.nextDouble() < 0.11) {
+//                placementMaps(pos.below(i), CCBBlocks.CAVE_VINES_PLANT.get().defaultBlockState().setValue(ICaveVines.BERRIES, true), defaultDistance(pos)+i);
+//            } else {
+//                placementMaps(pos.below(i), CCBBlocks.CAVE_VINES_PLANT.get().defaultBlockState().setValue(ICaveVines.BERRIES, false), defaultDistance(pos)+i);
+//            }
+//        }
+//        if (random.nextDouble() < 0.11) {
+//            placementMaps(pos.below(vineLength), CCBBlocks.CAVE_VINES.get().defaultBlockState().setValue(ICaveVines.BERRIES, true).setValue(AbstractPlantStemBlock.AGE, 25), defaultDistance(pos)+vineLength);
+//        } else {
+//            placementMaps(pos.below(vineLength), CCBBlocks.CAVE_VINES.get().defaultBlockState().setValue(ICaveVines.BERRIES, false).setValue(AbstractPlantStemBlock.AGE, 25), defaultDistance(pos)+vineLength);
+//        }
 
     }
 
     private void placePatch(BlockPos pos, boolean lichen, ArrayList<BlockPos> targetPositions) {
-        //Sizes appear to be always 1
         int size = RandomGenerators.patchSize();
         SpreadPattern pattern = new SpreadPattern(world, pos, size, size);
-        pattern.growBlockMap(100);
+        pattern.growBlockMap(15);
         for (BlockPos targetPos : pattern.returnMap().keySet()) {
-            if (!world.getBlockState(targetPos).isAir(world, targetPos)) {
+            if (!world.getBlockState(targetPos).getMaterial().equals(Material.AIR)) {
                 continue;
             }
             if (!targetPositions.contains(targetPos)) {
                 continue;
             }
+            //Get a default blockstate and then add sides to it depending on adjacent blocks
             BlockState placeState = lichen ? CCBBlocks.GLOW_LICHEN.get().defaultBlockState(): Blocks.VINE.defaultBlockState();
+            int successes = 0;
             for (Direction direction : Direction.values()) {
                 if (lichen) {
-                    if (direction != Direction.DOWN && world.getBlockState(targetPos.relative(direction)).is(SpeleogenesisBlockTags.GLOW_LICHEN_PLACEMENT)) {
+                    BlockState relState = world.getBlockState(targetPos.relative(direction));
+                    if (direction != Direction.DOWN && relState.is(SpeleogenesisBlockTags.GLOW_LICHEN_PLACEMENT)) {
                         placeState = ((GlowLichenBlock)CCBBlocks.GLOW_LICHEN.get()).withDirection(placeState, world, targetPos, direction);
+                        successes++;
                     }
                 } else {
                     if (direction != Direction.DOWN && VineBlock.isAcceptableNeighbour(world, targetPos.relative(direction), direction)) {
                         placeState = placeState.setValue(VineBlock.getPropertyForFace(direction), true);
+                        successes++;
                     }
                 }
             }
+            //Place if it found valid adjacent blocks
+            if (successes > 0) {
+                placementMaps(targetPos, placeState, defaultDistance(pos)+2);
+            }
 //            placementMaps(targetPos, Blocks.LAPIS_BLOCK.defaultBlockState());
-            placementMaps(targetPos, placeState, defaultDistance(pos)+2);
+//            placementMaps(targetPos, placeState, defaultDistance(pos)+2);
         }
     }
 
-//    private void placeLichen(BlockPos pos) {
-//        BlockPos.Mutable mutable = pos.mutable();
-//        Iterator var7 = Arrays.stream(Direction.values()).toList().iterator();
-//
-//        Direction direction;
-//        BlockState blockState;
-//        do {
-//            if (!var7.hasNext()) {
-//                return false;
-//            }
-//
-//            direction = (Direction)var7.next();
-//            blockState = reader.getBlockState(mutable.setWithOffset(pos, direction));
-//        } while(!config.canGrowOn(blockState.getBlock()));
-//
-//        GlowLichenBlock glowLichenBlock = (GlowLichenBlock)CCBBlocks.GLOW_LICHEN.get();
-//        BlockState directionalState = glowLichenBlock.withDirection(state, reader, pos, direction);
-//        if (directionalState == null) {
-//            return false;
-//        } else {
-//            reader.setBlock(pos, directionalState, 3);
-//            reader.getChunk(pos).markPosForPostprocessing(pos);
-//            if (random.nextFloat() < config.chanceOfSpreading) {
-//                glowLichenBlock.trySpreadRandomly(directionalState, reader, pos, direction, random, true);
-//            }
-//
-//            return true;
-//        }
-//    }
 
     private void plantAzaleaTree(BlockPos pos) {
-
+        AzaleaSaplingGenerator generator = new AzaleaSaplingGenerator();
+        if (world instanceof ServerWorld) {
+            ServerWorld serverWorld = (ServerWorld) world;
+            generator.growTree(serverWorld, serverWorld.getChunkSource().getGenerator(), pos, world.getBlockState(pos), new Random());
+            chatPrint("Attempted to grow an azalea tree", world);
+        }
     }
 
     private int ceilingHeight(BlockPos pos) {

@@ -7,7 +7,7 @@
 //DONE  Cull everything that's too far away by either spread or absolute distance.
 //DONE  Vertical distance matters less for absolute, so it's a vertically-elongated ovoid.
 
-//NOPE  3) Register all existing clay, water, moss, and decorations.
+//NO  3) Register all existing clay, water, moss, and decorations.
 
 //DONE  4) Get a list of all adjacent blocks (replacement candidates).
 //DONE  Split list into ceiling, floor, floor-corner, wall
@@ -33,7 +33,7 @@
 //DONE  Replace walls below clay with clay.
 //DONE  Replace walls adjacent to air above clay with clay.
 //DONE  In patches, thicken floor clay to two blocks (but only if there's solid matter there to affect).
-//NOPE  Replace a little bit of the newly-placed clay with moss. (Nothing underwater.) DECIDED AGAINST
+//NO  Replace a little bit of the newly-placed clay with moss. (Nothing underwater.)
 
 //DONE  7) Moss floor regions
 //DONE  Replace floor and floor-corner with moss. Don't count existing clay, moss, or water!
@@ -63,14 +63,14 @@
 //DONE  Actually place everything!
 //DONE  Place water, clay, and moss in the first sweep; decorations in the second (so they don't break instantly).
 //DONE  Make sure decorations don't break instantly.
-//TODO  When placing things, make sure they're replaceable. Air counts. Water source blocks do not. Clay shouldn't get replaced but that doesn't need to be a rule I think? Extant moss is occasionally replaced (by clay). Decorations shouldn't get fucked with.
+//DONE  When placing things, make sure they're replaceable. Air counts. Water source blocks do not. Clay shouldn't get replaced but that doesn't need to be a rule I think? Extant moss is occasionally replaced (by clay). Decorations shouldn't get fucked with.
 //DONE  Ripple placement
 //TODO  Pulse ripple placement
 //DONE  Fancy ripple placement that ripples along vines and big dripleaf
-//TODO  Fancier ripple placement that has tall dripleaf and long vines grow naturally
+//DONE  Fancier ripple placement that has tall dripleaf and long vines grow naturally
 //TODO  Placement shouldn't involve breaking, but some equivalent particle effects and block sounds wouldn't go amiss.
 
-//TODO  13) Azalea tree outside
+//TODO  13) Azalea tree outside (see AzaleaBlock: GENERATOR.growTree())
 
 //TODO  14) Spawn axolotls
 
@@ -81,9 +81,9 @@
 //DONE  Water decorations not spawning
 //DONE  Moss decorations breaking on spawn
 //DONE  Decorations (cave vines particularly) getting too dense on repeated throws. Only place decorations on NEW moss/clay!
-//TODO  Decorations placing on each other on repeated throws (azaleas and moss carpets replacing the bottom half of double grass) FIXED?
+//DONE  Decorations placing on each other on repeated throws (azaleas and moss carpets replacing the bottom half of double grass) FIXED?
 //DONE  Ceiling stone patches too small (multiple threads from each bare spot? a different patch generation method?)
-//TODO  Improve overlap with existing lush caves terrain
+//DONE  Improve overlap with existing lush caves terrain
 //TODO  Gravel falling on placement
 //DONE  Projectile looks like an ender pearl
 //TODO  Check that partial pool shrinking is working!
@@ -95,15 +95,15 @@
 //DONE  Dripleaf should be rarer
 //DONE  Clay should replace walls below itself
 //DONE  Fill in water less
-//TODO  Patches where clay doesn't replace stone
+//NO  Patches where clay doesn't replace stone
 //DONE  Moss should be able to border water
-//TODO  Remove water before placing clay? Decide.
+//NO  Remove water before placing clay? Decide.
 //DONE  Small dripleaf top not placing
 //DONE  Dripleaf placing not waterlogged
-//TODO  Clay sometimes overhangs water for some reason. Fixed?
-//TODO  Perhaps clay shouldn't place outside the range?
+//DONE  Clay sometimes overhangs water for some reason. Fixed, I think?
+//NO  Perhaps clay shouldn't place outside the range?
 //TODO  Multiple simultaneous throws produce floating decorations and other problems
-//TODO  Lichen occasionally generates as a cube
+//DONE  Lichen occasionally generates as a cube
 
 
 

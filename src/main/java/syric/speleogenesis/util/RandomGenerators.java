@@ -182,8 +182,8 @@ public class RandomGenerators {
 
     //Gives the size of a patch of vines / lichen
     public static int patchSize() {
-        int one = Math.min(rdm.nextInt(3), rdm.nextInt(3));
-        int two = Math.min(rdm.nextInt(3), rdm.nextInt(3));
+        int one = Math.min(rdm.nextInt(4), rdm.nextInt(4));
+        int two = Math.min(rdm.nextInt(4), rdm.nextInt(4));
         return Math.min(one, two) + 1;
     }
 
